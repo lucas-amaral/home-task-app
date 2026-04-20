@@ -30,6 +30,24 @@ const FREQ_OPTIONS = [
   { value: 'BIWEEKLY', label: 'Quinzenal' },
   { value: 'MONTHLY', label: 'Mensal' },
 ]
+const TYPE_LABEL: Record<TaskType, string> = {
+  DAILY: 'diária',
+  WEEKLY: 'semanal',
+  JOINT: 'conjunta',
+  RULE: 'regra',
+}
+const FREQ_LABEL: Record<TaskFrequency, string> = {
+  DAILY: 'diária',
+  WEEKLY: 'semanal',
+  BIWEEKLY: 'quinzenal',
+  MONTHLY: 'mensal',
+}
+const ASSIGNEE_LABEL: Record<Assignee, string> = {
+  UNASSIGNED: 'não atribuída',
+  CHILD1: 'criança 1',
+  CHILD2: 'criança 2',
+  BOTH: 'ambos',
+}
 const TYPE_COLOR: Record<TaskType, string> = {
   DAILY:'var(--daily-border)', WEEKLY:'var(--weekly-border)',
   JOINT:'var(--joint-border)', RULE:'var(--rule-border)',
@@ -199,9 +217,9 @@ export function AdminPage() {
                   <p style={{ fontSize:13, fontWeight:500 }}>{t.name}</p>
                   {t.description && <p style={{ fontSize:11, color:'var(--text-secondary)', marginTop:1 }}>{t.description}</p>}
                   <p style={{ fontSize:11, color:'var(--text-hint)', marginTop:2 }}>
-                    {t.type.toLowerCase()} · {t.frequency.toLowerCase()} · {t.points} ponto{t.points !== 1 ? 's' : ''}
+                    {TYPE_LABEL[t.type]} · {FREQ_LABEL[t.frequency]} · {t.points} ponto{t.points !== 1 ? 's' : ''}
                     {t.deadline ? ` · ${t.deadline}` : ''}
-                    {t.defaultAssignee !== 'UNASSIGNED' ? ` · padrão: ${t.defaultAssignee}` : ''}
+                    {t.defaultAssignee !== 'UNASSIGNED' ? ` · padrão: ${ASSIGNEE_LABEL[t.defaultAssignee]}` : ''}
                   </p>
                 </div>
                 <span style={{
