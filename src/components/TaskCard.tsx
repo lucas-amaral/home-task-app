@@ -96,13 +96,8 @@ export function TaskCard({
         </span>
       </div>
 
-      {/* Deadline + period date */}
+      {/* Period date */}
       <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:7 }}>
-        {assignment.deadline && (
-          <span style={{ fontSize:11, color:s.text, opacity:0.65 }}>
-            🕐 {assignment.deadline}
-          </span>
-        )}
         <span style={{ fontSize:11, color:s.text, opacity:0.5, marginLeft:'auto' }}>
           {periodLabel}
         </span>
