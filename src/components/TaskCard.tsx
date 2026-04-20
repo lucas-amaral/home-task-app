@@ -1,0 +1,261 @@
+import { useState } from 'react'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import type { Assignment, Assignee, TaskType } from '../types'
+
+interface Props {
+  assignment: Assignment
+  child1Name: string
+  child2Name: string
+  onAssign: (assignedTo: Assignee) => void
+  onToggleComplete: (bonusEarned?: boolean) => void
+  onPenalty: () => void
+  dragging?: boolean
+}
+
+const TYPE: Record<TaskType, { bg: string; border: string; text: string; label: string }> = {
+  DAILY:  { bg:'var(--daily-bg)',  border:'var(--daily-border)',  text:'var(--daily-text)',  label:'daily' },
+  WEEKLY: { bg:'var(--weekly-bg)', border:'var(--weekly-border)', text:'var(--weekly-text)', label:'weekly' },
+  JOINT:  { bg:'var(--joint-bg)',  border:'var(--joint-border)',  text:'var(--joint-text)',  label:'joint' },
+  RULE:   { bg:'var(--rule-bg)',   border:'var(--rule-border)',   text:'var(--rule-text)',   label:'rule' },
+}
+
+export function TaskCard({
+  assignment, child1Name, child2Name,
+  onAssign, onToggleComplete, onPenalty, dragging
+}: Props) {
+  const [bonusPrompt, setBonusPrompt] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  const s = TYPE[assignment.taskType]
+  const isJoint = assignment.assignedTo === 'BOTH'
+  const isCompleted = assignment.completed
+
+  // Format the completion date for display
+  const completedDateLabel = isCompleted && assignment.completedAt
+    ? format(new Date(assignment.completedAt), "dd/MM HH:mm", { locale: ptBR })
+    : null
+
+  // Show completion date on the period date if not yet completed
+  const periodLabel = format(new Date(assignment.periodDate + 'T12:00:00'), 'dd/MM', { locale: ptBR })
+
+  function handleDoneClick() {
+    if (isCompleted) { onToggleComplete(); return }
+    // Only prompt for bonus if not already prompting
+    setBonusPrompt(true)
+  }
+
+  function confirmBonus(bonus: boolean) {
+    onToggleComplete(bonus)
+    setBonusPrompt(false)
+  }
+
+  return (
+    <div
+      data-testid="task-card"
+      style={{
+        background: s.bg,
+        border: `1.5px solid ${s.border}`,
+        borderRadius: 'var(--radius-md)',
+        padding: '11px 13px',
+        marginBottom: 9,
+        opacity: dragging ? 0.35 : isCompleted ? 0.58 : 1,
+        transition: 'opacity .2s, transform .15s, box-shadow .15s',
+        cursor: 'grab',
+        position: 'relative',
+        animation: 'fadeIn .22s ease',
+      }}
+      onMouseEnter={e => {
+        if (!isCompleted) {
+          const el = e.currentTarget as HTMLDivElement
+          el.style.transform = 'rotate(-0.6deg) translateY(-2px)'
+          el.style.boxShadow = 'var(--shadow-md)'
+        }
+      }}
+      onMouseLeave={e => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.transform = ''
+        el.style.boxShadow = ''
+      }}
+    >
+      {/* Header row */}
+      <div style={{ display:'flex', alignItems:'flex-start', gap:7, marginBottom:5 }}>
+        <div style={{ flex:1 }}>
+          <p style={{
+            fontSize:13, fontWeight:500, color: s.text, lineHeight:1.35,
+            textDecoration: isCompleted ? 'line-through' : 'none',
+          }}>
+            {assignment.taskName}
+          </p>
+        </div>
+        <span style={{
+          fontSize:10, fontWeight:500, padding:'2px 7px', borderRadius:20,
+          background: s.border, color: s.bg, whiteSpace:'nowrap', flexShrink:0,
+        }}>
+          {s.label} +{assignment.points}
+        </span>
+      </div>
+
+      {/* Deadline + period date */}
+      <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:7 }}>
+        {assignment.deadline && (
+          <span style={{ fontSize:11, color:s.text, opacity:0.65 }}>
+            🕐 {assignment.deadline}
+          </span>
+        )}
+        <span style={{ fontSize:11, color:s.text, opacity:0.5, marginLeft:'auto' }}>
+          {periodLabel}
+        </span>
+      </div>
+
+      {/* Bonus prompt */}
+      {bonusPrompt && (
+        <div style={{
+          background:'rgba(255,255,255,0.75)', borderRadius:'var(--radius-sm)',
+          padding:'8px 10px', marginBottom:8,
+        }}>
+          <p style={{ fontSize:12, color:s.text, fontWeight:500, marginBottom:6 }}>
+            Feito sem ser lembrado?
+          </p>
+          <div style={{ display:'flex', gap:6 }}>
+            <button onClick={() => confirmBonus(true)} style={{
+              flex:1, padding:'4px 0', borderRadius:'var(--radius-sm)',
+              background: s.border, color: s.bg, fontSize:12, fontWeight:500,
+            }}>Sim +1 bonus</button>
+            <button onClick={() => confirmBonus(false)} style={{
+              flex:1, padding:'4px 0', borderRadius:'var(--radius-sm)',
+              border:`1px solid ${s.border}`, color:s.text, fontSize:12,
+            }}>Não</button>
+          </div>
+        </div>
+      )}
+
+      {/* Footer: avatars + completion date + done button */}
+      <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+        {/* Avatar(s) */}
+        {isJoint ? (
+          <div style={{ display:'flex', gap:4, alignItems:'center' }}>
+            <Avatar label={child1Name.slice(0,2).toUpperCase()} color="child1" active />
+            <Avatar label={child2Name.slice(0,2).toUpperCase()} color="child2" active />
+            <span style={{ fontSize:11, color:s.text, opacity:0.65 }}>together</span>
+          </div>
+        ) : (
+          <div style={{ display:'flex', gap:4 }}>
+            <Avatar
+              label={child1Name.slice(0,2).toUpperCase()} color="child1"
+              active={assignment.assignedTo === 'CHILD1'}
+              onClick={() => !isCompleted && onAssign('CHILD1')}
+            />
+            <Avatar
+              label={child2Name.slice(0,2).toUpperCase()} color="child2"
+              active={assignment.assignedTo === 'CHILD2'}
+              onClick={() => !isCompleted && onAssign('CHILD2')}
+            />
+          </div>
+        )}
+
+        {/* Completion timestamp */}
+        {completedDateLabel && (
+          <span style={{ fontSize:10, color:s.text, opacity:0.55 }}>
+            ✓ {completedDateLabel}
+          </span>
+        )}
+
+        <div style={{ flex:1 }} />
+
+        {/* Penalty menu */}
+        {!isCompleted && assignment.assignedTo !== 'UNASSIGNED' && (
+          <div style={{ position:'relative' }}>
+            <button
+              onClick={() => setMenuOpen(v => !v)}
+              style={{ fontSize:15, color:s.text, opacity:0.45, padding:'0 3px', lineHeight:1 }}
+            >⋯</button>
+            {menuOpen && (
+              <div style={{
+                position:'absolute', right:0, bottom:'110%',
+                background:'var(--surface)', border:'1px solid var(--border-strong)',
+                borderRadius:'var(--radius-sm)', boxShadow:'var(--shadow-md)',
+                minWidth:168, zIndex:20,
+              }}>
+                <button
+                  onClick={() => { onPenalty(); setMenuOpen(false) }}
+                  style={{
+                    display:'block', width:'100%', textAlign:'left',
+                    padding:'8px 12px', fontSize:12, color:'#A32D2D',
+                  }}
+                >Apply penalty −1 pt</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Done circle – always visible for BOTH and assigned tasks */}
+        {(isJoint || assignment.assignedTo !== 'UNASSIGNED') && (
+          <button
+            onClick={handleDoneClick}
+            data-testid="done-btn"
+            style={{
+              width:23, height:23, borderRadius:'50%',
+              border:`1.5px solid ${s.border}`,
+              background: isCompleted ? s.border : 'transparent',
+              color: isCompleted ? s.bg : 'transparent',
+              fontSize:12, fontWeight:700,
+              display:'flex', alignItems:'center', justifyContent:'center',
+              transition:'all .15s', flexShrink:0,
+            }}
+            title={isCompleted ? 'Mark as not done' : 'Mark as done'}
+          >
+            {isCompleted ? '✓' : ''}
+          </button>
+        )}
+      </div>
+
+      {/* Penalty badge */}
+      {assignment.penaltyApplied && (
+        <span style={{
+          position:'absolute', top:7, right:7,
+          fontSize:10, background:'#FCEBEB', color:'#A32D2D',
+          padding:'1px 6px', borderRadius:10,
+        }}>penalty</span>
+      )}
+    </div>
+  )
+}
+
+// ── Avatar ────────────────────────────────────────────────────────────────────
+
+interface AvatarProps {
+  label: string
+  color: 'child1' | 'child2' | 'both'
+  active?: boolean
+  size?: number
+  onClick?: () => void
+}
+
+export function Avatar({ label, color, active, size = 23, onClick }: AvatarProps) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={!onClick}
+      style={{
+        width:size, height:size, borderRadius:'50%',
+        background: active
+          ? `var(--${color}-mid)`
+          : 'var(--surface-2)',
+        border: `1.5px solid ${active ? `var(--${color}-strong)` : 'var(--border)'}`,
+        color: active ? `var(--${color}-dark)` : 'var(--text-hint)',
+        fontSize: size * 0.37,
+        fontWeight:500,
+        display:'flex', alignItems:'center', justifyContent:'center',
+        cursor: onClick ? 'pointer' : 'default',
+        transition:'all .15s',
+        flexShrink:0,
+        fontFamily:'var(--font-body)',
+      }}
+      onMouseEnter={e => { if (onClick) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.14)' }}
+      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = '' }}
+    >
+      {label}
+    </button>
+  )
+}
