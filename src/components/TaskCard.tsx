@@ -14,10 +14,10 @@ interface Props {
 }
 
 const TYPE: Record<TaskType, { bg: string; border: string; text: string; label: string }> = {
-  DAILY:  { bg:'var(--daily-bg)',  border:'var(--daily-border)',  text:'var(--daily-text)',  label:'daily' },
-  WEEKLY: { bg:'var(--weekly-bg)', border:'var(--weekly-border)', text:'var(--weekly-text)', label:'weekly' },
-  JOINT:  { bg:'var(--joint-bg)',  border:'var(--joint-border)',  text:'var(--joint-text)',  label:'joint' },
-  RULE:   { bg:'var(--rule-bg)',   border:'var(--rule-border)',   text:'var(--rule-text)',   label:'rule' },
+  DAILY:  { bg:'var(--daily-bg)',  border:'var(--daily-border)',  text:'var(--daily-text)',  label:'diária' },
+  WEEKLY: { bg:'var(--weekly-bg)', border:'var(--weekly-border)', text:'var(--weekly-text)', label:'semanal' },
+  JOINT:  { bg:'var(--joint-bg)',  border:'var(--joint-border)',  text:'var(--joint-text)',  label:'compartilhada' },
+  RULE:   { bg:'var(--rule-bg)',   border:'var(--rule-border)',   text:'var(--rule-text)',   label:'regra' },
 }
 
 export function TaskCard({
@@ -236,7 +236,7 @@ export function TaskCard({
           position:'absolute', top:7, right:7,
           fontSize:10, background:'#FCEBEB', color:'#A32D2D',
           padding:'1px 6px', borderRadius:10,
-        }}>penalty</span>
+        }}>atrasado</span>
       )}
     </div>
   )

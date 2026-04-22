@@ -41,6 +41,9 @@ export const boardApi = {
   penalty: (id: number): Promise<Assignment> =>
     api.post(`/assignments/${id}/penalty`).then(r => r.data),
 
+  unpenalty: (id: number): Promise<Assignment> =>
+    api.post(`/assignments/${id}/unpenalty`).then(r => r.data),
+
   // History
   pointsHistory: (): Promise<PointLedgerDto[]> =>
     api.get('/points/history').then(r => r.data),
