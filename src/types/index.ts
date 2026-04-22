@@ -20,6 +20,7 @@ export interface Assignment {
   id: number
   taskId: number
   taskName: string
+  taskDescription?: string
   taskType: TaskType
   taskFrequency: TaskFrequency
   assignedTo: Assignee

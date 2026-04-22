@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useBoard } from '../hooks/useBoard'
-import { Header, ScorePanel, Legend } from '../components/Layout'
+import { Header, PersonScoreCards, RewardsPanel, Legend } from '../components/Layout'
 import { BoardColumns } from '../components/BoardColumns'
 import { boardApi } from '../api/client'
 import type { Reward } from '../types'
@@ -41,30 +41,36 @@ export function BoardPage() {
         loading={loading}
       />
 
-      {loading && !board ? (
-        <p style={{ textAlign:'center', padding:'60px 0', color:'var(--text-hint)', fontSize:14 }}>
-          Loading board…
-        </p>
-      ) : board ? (
-        <>
-          <ScorePanel
-            child1Name={board.child1Name}
-            child2Name={board.child2Name}
-            child1Points={board.weekPoints['CHILD1'] ?? 0}
-            child2Points={board.weekPoints['CHILD2'] ?? 0}
-            rewards={rewards}
-          />
-          <Legend />
-          <p style={{ fontSize:11, color:'var(--text-hint)', marginBottom:11 }}>
-            Arraste os cards entre as colunas · Clique no avatar para atribuir · Círculo = marcar como concluído          </p>
-          <BoardColumns
-            board={board}
-            onAssign={assign}
-            onToggleComplete={toggleComplete}
-            onPenalty={applyPenalty}
-          />
-        </>
-      ) : null}
+       {loading && !board ? (
+         <p style={{ textAlign:'center', padding:'60px 0', color:'var(--text-hint)', fontSize:14 }}>
+           Loading board…
+         </p>
+       ) : board ? (
+         <>
+           <PersonScoreCards
+             child1Name={board.child1Name}
+             child2Name={board.child2Name}
+             child1Points={board.weekPoints['CHILD1'] ?? 0}
+             child2Points={board.weekPoints['CHILD2'] ?? 0}
+           />
+           <p style={{ fontSize:11, color:'var(--text-hint)', marginBottom:11 }}>
+             Arraste os cards entre as colunas · Clique no avatar para atribuir · Círculo = marcar como concluído          </p>
+           <div style={{ marginBottom:20 }}>
+             <BoardColumns
+               board={board}
+               onAssign={assign}
+               onToggleComplete={toggleComplete}
+               onPenalty={applyPenalty}
+             />
+           </div>
+           <RewardsPanel
+             child1Points={board.weekPoints['CHILD1'] ?? 0}
+             child2Points={board.weekPoints['CHILD2'] ?? 0}
+             rewards={rewards}
+           />
+           <Legend />
+         </>
+       ) : null}
     </div>
   )
 }

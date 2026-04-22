@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { format } from 'date-fns'
+import { format, addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import type { Assignment, Assignee, TaskType } from '../types'
 
@@ -26,6 +26,7 @@ export function TaskCard({
 }: Props) {
   const [bonusPrompt, setBonusPrompt] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [showTooltip, setShowTooltip] = useState(false)
 
   const s = TYPE[assignment.taskType]
   const isJoint = assignment.assignedTo === 'BOTH'
@@ -37,7 +38,14 @@ export function TaskCard({
     : null
 
   // Show completion date on the period date if not yet completed
-  const periodLabel = format(new Date(assignment.periodDate + 'T12:00:00'), 'dd/MM', { locale: ptBR })
+  const periodDate = new Date(assignment.periodDate + 'T12:00:00')
+  const periodLabel = assignment.taskType === 'WEEKLY'
+    ? (() => {
+      const startDate = periodDate
+      const endDate = addDays(periodDate, 6)
+      return `${format(startDate, 'dd')}–${format(endDate, 'dd MMM', { locale: ptBR })}`
+    })()
+    : format(periodDate, 'dd/MM', { locale: ptBR })
 
   function handleDoneClick() {
     if (isCompleted) { onToggleComplete(); return }
@@ -71,13 +79,30 @@ export function TaskCard({
           el.style.transform = 'rotate(-0.6deg) translateY(-2px)'
           el.style.boxShadow = 'var(--shadow-md)'
         }
+        if (assignment.taskDescription) setShowTooltip(true)
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLDivElement
         el.style.transform = ''
         el.style.boxShadow = ''
+        setShowTooltip(false)
       }}
     >
+      {/* Tooltip */}
+      {showTooltip && assignment.taskDescription && (
+        <div style={{
+          position: 'absolute', bottom: '100%', left: 0, right: 0,
+          background: s.border, color: s.bg,
+          padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+          fontSize: 12, marginBottom: 6, zIndex: 50,
+          boxShadow: 'var(--shadow-md)',
+          pointerEvents: 'none',
+          lineHeight: 1.4,
+          wordWrap: 'break-word',
+        }}>
+          {assignment.taskDescription}
+        </div>
+      )}
       {/* Header row */}
       <div style={{ display:'flex', alignItems:'flex-start', gap:7, marginBottom:5 }}>
         <div style={{ flex:1 }}>
@@ -132,7 +157,7 @@ export function TaskCard({
           <div style={{ display:'flex', gap:4, alignItems:'center' }}>
             <Avatar label={child1Name.slice(0,2).toUpperCase()} color="child1" active />
             <Avatar label={child2Name.slice(0,2).toUpperCase()} color="child2" active />
-            <span style={{ fontSize:11, color:s.text, opacity:0.65 }}>together</span>
+            <span style={{ fontSize:11, color:s.text, opacity:0.65 }}>juntos</span>
           </div>
         ) : (
           <div style={{ display:'flex', gap:4 }}>

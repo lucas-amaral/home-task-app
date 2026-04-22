@@ -5,6 +5,7 @@ import type { Assignment } from '../types'
 
 const base: Assignment = {
   id: 1, taskId: 10, taskName: 'Vacuum',
+  taskDescription: 'Vacuum the living room',
   taskType: 'DAILY', taskFrequency: 'DAILY',
   assignedTo: 'CHILD1', periodDate: '2024-01-15',
   completed: false, completedAt: null,
@@ -29,14 +30,14 @@ describe('TaskCard', () => {
   it('shows bonus prompt when done button clicked and not yet complete', () => {
     render(<TaskCard {...props} />)
     fireEvent.click(screen.getByTestId('done-btn'))
-    expect(screen.getByText(/Done without being reminded/i)).toBeInTheDocument()
+    expect(screen.getByText(/Feito sem ser lembrado/i)).toBeInTheDocument()
   })
 
   it('calls onToggleComplete with bonusEarned=true when Yes clicked', () => {
     const onToggle = vi.fn()
     render(<TaskCard {...props} onToggleComplete={onToggle} />)
     fireEvent.click(screen.getByTestId('done-btn'))
-    fireEvent.click(screen.getByText(/Yes/i))
+    fireEvent.click(screen.getByText(/Sim/i))
     expect(onToggle).toHaveBeenCalledWith(true)
   })
 
@@ -44,7 +45,7 @@ describe('TaskCard', () => {
     const onToggle = vi.fn()
     render(<TaskCard {...props} onToggleComplete={onToggle} />)
     fireEvent.click(screen.getByTestId('done-btn'))
-    fireEvent.click(screen.getByText(/^No$/i))
+    fireEvent.click(screen.getByText(/Não/i))
     expect(onToggle).toHaveBeenCalledWith(false)
   })
 
@@ -57,7 +58,7 @@ describe('TaskCard', () => {
   it('renders BOTH avatars for JOINT task and shows together label', () => {
     const joint = { ...base, assignedTo: 'BOTH' as const, taskType: 'JOINT' as const }
     render(<TaskCard {...props} assignment={joint} />)
-    expect(screen.getByText('together')).toBeInTheDocument()
+    expect(screen.getByText('juntos')).toBeInTheDocument()
     expect(screen.getByText('AL')).toBeInTheDocument()
     expect(screen.getByText('BO')).toBeInTheDocument()
   })

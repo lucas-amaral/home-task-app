@@ -1,5 +1,4 @@
 import { NavLink } from 'react-router-dom'
-import { format } from 'date-fns'
 
 // ── Nav ───────────────────────────────────────────────────────────────────────
 
@@ -56,10 +55,10 @@ export function Header({ todayLabel, weekLabel, onRefresh, loading }: HeaderProp
       <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', flexWrap:'wrap', gap:10, marginBottom:13 }}>
         <div>
           <h1 style={{ fontSize:30, fontFamily:'var(--font-display)', fontWeight:500, lineHeight:1.1 }}>
-            Home Tasks
+            Tarefas da Casa
           </h1>
           <p style={{ fontSize:13, color:'var(--text-secondary)', marginTop:3, textTransform:'capitalize' }}>
-            {todayLabel} · Semana de {weekLabel}
+            {todayLabel}
           </p>
         </div>
         <button
@@ -140,6 +139,50 @@ export function ScorePanel({ child1Name, child2Name, child1Points, child2Points,
         </div>
       )}
     </div>
+  )
+}
+
+export function PersonScoreCards({ child1Name, child2Name, child1Points, child2Points }: { child1Name: string; child2Name: string; child1Points: number; child2Points: number }) {
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:20 }}>
+      <PersonScore name={child1Name} points={child1Points} color="child1" />
+      <PersonScore name={child2Name} points={child2Points} color="child2" />
+    </div>
+  )
+}
+
+export function RewardsPanel({ child1Points, child2Points, rewards }: { child1Points: number; child2Points: number; rewards: Array<{ id: number; name: string; pointsCost: number; emoji: string }> }) {
+  return (
+    <>
+      {rewards.length > 0 && (
+        <div style={{
+          background:'var(--surface)',
+          border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'13px 17px', marginBottom:20
+        }}>
+          <p style={{ fontSize:11, fontWeight:500, color:'var(--text-secondary)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:10 }}>
+            Prêmios
+          </p>
+          {rewards.map(r => {
+            const barMax = Math.max(r.pointsCost, child1Points, child2Points, 1)
+            const c1pct = Math.min(100, (child1Points / barMax) * 100)
+            const c2pct = Math.min(100, (child2Points / barMax) * 100)
+            const thresh = (r.pointsCost / barMax) * 100
+            return (
+              <div key={r.id} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                <span style={{ fontSize:15 }}>{r.emoji}</span>
+                <span style={{ fontSize:13, flex:1 }}>{r.name}</span>
+                <div style={{ width:120, height:6, background:'var(--surface-2)', borderRadius:3, position:'relative', flexShrink:0 }}>
+                  <div style={{ position:'absolute', left:0, top:0, height:'100%', width:`${c1pct}%`, background:'var(--child1-mid)', borderRadius:3, transition:'width .4s' }} />
+                  <div style={{ position:'absolute', left:0, top:0, height:'100%', width:`${c2pct}%`, background:'var(--child2-mid)', borderRadius:3, opacity:0.55, transition:'width .4s' }} />
+                  <div style={{ position:'absolute', left:`${thresh}%`, top:-2, bottom:-2, width:2, background:'var(--text-hint)', borderRadius:1 }} />
+                </div>
+                <span style={{ fontSize:12, color:'var(--text-hint)', minWidth:38, textAlign:'right' }}>{r.pointsCost} pts</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </>
   )
 }
 
