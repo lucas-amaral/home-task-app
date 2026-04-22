@@ -4,7 +4,6 @@ import type { BoardDto, Assignee } from '../types'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
-/** Today as yyyy-MM-dd */
 function todayStr() {
   return format(new Date(), 'yyyy-MM-dd')
 }
@@ -30,7 +29,6 @@ export function useBoard() {
 
   useEffect(() => { fetchBoard() }, [fetchBoard])
 
-  /** Assign a task to a person. Passes correct period key depending on task frequency. */
   const assign = useCallback(async (
     assignmentId: number,
     taskId: number,
@@ -63,7 +61,6 @@ export function useBoard() {
         ? await boardApi.uncomplete(id)
         : await boardApi.complete(id, bonusEarned)
 
-      // Update assignment + recalculate points optimistically
       const pts = existing.points + (bonusEarned && !existing.completed ? 1 : 0)
       const sign = existing.completed ? -1 : 1
       const targets = existing.assignedTo === 'BOTH'
@@ -109,7 +106,30 @@ export function useBoard() {
     }
   }, [board])
 
-  // Human-readable week label using the weekStart returned by the backend
+  /** Creates a one-off task (DAILY, active=true) and immediately assigns it to today */
+  const addOneOff = useCallback(async (assignedTo: Assignee, name: string, points: number) => {
+    if (!board) return
+    try {
+      // 1. Create the task
+      const task = await boardApi.createTask({
+        name,
+        type: 'DAILY',
+        frequency: 'DAILY',
+        defaultAssignee: assignedTo,
+        points,
+      })
+      // 2. Assign it to today — the board API returns the assignment row
+      const assignment = await boardApi.assign(task.id, assignedTo, date)
+      // 3. Append to board
+      setBoard(prev => prev ? {
+        ...prev,
+        assignments: [...prev.assignments, assignment],
+      } : prev)
+    } catch (e) {
+      console.error('addOneOff error', e)
+    }
+  }, [board, date])
+
   const weekLabel = board
     ? format(new Date(board.weekStart + 'T12:00:00'), "dd 'de' MMMM", { locale: ptBR })
     : ''
@@ -120,7 +140,7 @@ export function useBoard() {
 
   return {
     board, loading, error,
-    assign, toggleComplete, applyPenalty,
+    assign, toggleComplete, applyPenalty, addOneOff,
     weekLabel, todayLabel,
     refetch: fetchBoard,
   }

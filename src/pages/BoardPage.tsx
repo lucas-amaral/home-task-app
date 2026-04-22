@@ -6,7 +6,7 @@ import { boardApi } from '../api/client'
 import type { Reward } from '../types'
 
 export function BoardPage() {
-  const { board, loading, error, assign, toggleComplete, applyPenalty, weekLabel, todayLabel, refetch } = useBoard()
+  const { board, loading, error, assign, toggleComplete, applyPenalty, addOneOff, weekLabel, todayLabel, refetch } = useBoard()
   const [rewards, setRewards] = useState<Reward[]>([])
 
   useEffect(() => { boardApi.listRewards().then(setRewards).catch(() => {}) }, [])
@@ -54,13 +54,15 @@ export function BoardPage() {
              child2Points={board.weekPoints['CHILD2'] ?? 0}
            />
            <p style={{ fontSize:11, color:'var(--text-hint)', marginBottom:11 }}>
-             Arraste os cards entre as colunas · Clique no avatar para atribuir · Círculo = marcar como concluído          </p>
+             Arraste os cards entre as colunas · Clique no avatar para atribuir · Círculo = marcar como concluído
+           </p>
            <div style={{ marginBottom:20 }}>
              <BoardColumns
                board={board}
                onAssign={assign}
                onToggleComplete={toggleComplete}
                onPenalty={applyPenalty}
+               onAddOneOff={addOneOff}
              />
            </div>
            <RewardsPanel

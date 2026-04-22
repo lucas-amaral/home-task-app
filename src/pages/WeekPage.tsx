@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { format, startOfWeek, addWeeks, subWeeks } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { boardApi } from '../api/client'
@@ -17,13 +17,40 @@ export function WeekPage() {
   const [summary, setSummary] = useState<WeekSummaryDto | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const loadSummary = useCallback((date: Date) => {
     setLoading(true)
-    boardApi.getWeekSummary(fmtWeek(weekDate))
+    boardApi.getWeekSummary(fmtWeek(date))
       .then(setSummary)
       .catch(() => setSummary(null))
       .finally(() => setLoading(false))
-  }, [weekDate])
+  }, [])
+
+  useEffect(() => { loadSummary(weekDate) }, [weekDate, loadSummary])
+
+  /** Toggle bonus on a completed assignment and refresh points */
+  const toggleBonus = useCallback(async (a: Assignment) => {
+    if (!a.completed) return
+    try {
+      // If bonus is already earned → uncomplete + re-complete without bonus
+      // If bonus not earned → uncomplete + re-complete with bonus
+      await boardApi.uncomplete(a.id)
+      const updated = await boardApi.complete(a.id, !a.bonusEarned)
+      setSummary(prev => {
+        if (!prev) return prev
+        const assignments = prev.assignments.map(x => x.id === a.id ? updated : x)
+        // Recalculate points from assignments
+        const points = { ...prev.points }
+        const delta = updated.bonusEarned ? 1 : -1
+        const targets = a.assignedTo === 'BOTH'
+          ? ['CHILD1', 'CHILD2']
+          : a.assignedTo === 'UNASSIGNED' ? [] : [a.assignedTo]
+        targets.forEach(p => { points[p] = Math.max(0, (points[p] ?? 0) + delta) })
+        return { ...prev, assignments, points }
+      })
+    } catch (e) {
+      console.error('toggleBonus error', e)
+    }
+  }, [])
 
   const weekLabel = format(weekDate, "dd 'de' MMMM", { locale: ptBR })
   const weekEndLabel = format(new Date(weekDate.getTime() + 6 * 86400000), "dd 'de' MMMM", { locale: ptBR })
@@ -100,8 +127,13 @@ export function WeekPage() {
             })}
           </div>
 
-          {/* Assignments grouped by day */}
-          <WeekGrid assignments={summary.assignments} child1Name={summary.child1Name} child2Name={summary.child2Name} weekStart={weekDate} />
+          <WeekGrid
+            assignments={summary.assignments}
+            child1Name={summary.child1Name}
+            child2Name={summary.child2Name}
+            weekStart={weekDate}
+            onToggleBonus={toggleBonus}
+          />
         </>
       )}
 
@@ -115,8 +147,9 @@ export function WeekPage() {
   )
 }
 
-function WeekGrid({ assignments, child1Name, child2Name, weekStart }: {
-  assignments: Assignment[]; child1Name: string; child2Name: string; weekStart: Date
+function WeekGrid({ assignments, child1Name, child2Name, weekStart, onToggleBonus }: {
+  assignments: Assignment[]; child1Name: string; child2Name: string
+  weekStart: Date; onToggleBonus: (a: Assignment) => void
 }) {
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart.getTime() + i * 86400000)
@@ -126,27 +159,28 @@ function WeekGrid({ assignments, child1Name, child2Name, weekStart }: {
   const dayLabel = (dateStr: string) =>
     format(new Date(dateStr + 'T12:00:00'), "EEEE dd/MM", { locale: ptBR })
 
-  // Weekly tasks (no specific day)
   const weeklyTasks = assignments.filter(a => a.taskFrequency !== 'DAILY')
   const dailyByDay = (dateStr: string) =>
     assignments.filter(a => a.taskFrequency === 'DAILY' && a.periodDate === dateStr)
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-      {/* Weekly tasks section */}
       {weeklyTasks.length > 0 && (
         <Section title="Tarefas semanais">
-          {weeklyTasks.map(a => <TaskRow key={a.id} a={a} child1Name={child1Name} child2Name={child2Name} />)}
+          {weeklyTasks.map(a => (
+            <TaskRow key={a.id} a={a} child1Name={child1Name} child2Name={child2Name} onToggleBonus={onToggleBonus} />
+          ))}
         </Section>
       )}
 
-      {/* Daily tasks per day */}
       {days.map(d => {
         const tasks = dailyByDay(d)
         if (tasks.length === 0) return null
         return (
           <Section key={d} title={dayLabel(d)}>
-            {tasks.map(a => <TaskRow key={a.id} a={a} child1Name={child1Name} child2Name={child2Name} />)}
+            {tasks.map(a => (
+              <TaskRow key={a.id} a={a} child1Name={child1Name} child2Name={child2Name} onToggleBonus={onToggleBonus} />
+            ))}
           </Section>
         )
       })}
@@ -165,7 +199,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-function TaskRow({ a, child1Name, child2Name }: { a: Assignment; child1Name: string; child2Name: string }) {
+function TaskRow({ a, child1Name, child2Name, onToggleBonus }: {
+  a: Assignment; child1Name: string; child2Name: string
+  onToggleBonus: (a: Assignment) => void
+}) {
+  const [toggling, setToggling] = useState(false)
+
   const assigneeName =
     a.assignedTo === 'CHILD1' ? child1Name
     : a.assignedTo === 'CHILD2' ? child2Name
@@ -175,6 +214,12 @@ function TaskRow({ a, child1Name, child2Name }: { a: Assignment; child1Name: str
   const completedTime = a.completedAt
     ? format(new Date(a.completedAt), 'HH:mm')
     : null
+
+  async function handleToggleBonus() {
+    if (!a.completed || toggling) return
+    setToggling(true)
+    try { await onToggleBonus(a) } finally { setToggling(false) }
+  }
 
   return (
     <div style={{
@@ -197,11 +242,32 @@ function TaskRow({ a, child1Name, child2Name }: { a: Assignment; child1Name: str
         <p style={{ fontSize:11, color:'var(--text-secondary)' }}>{assigneeName}</p>
       </div>
 
-      <div style={{ textAlign:'right', flexShrink:0 }}>
+      <div style={{ textAlign:'right', flexShrink:0, display:'flex', flexDirection:'column', alignItems:'flex-end', gap:3 }}>
         {a.completed ? (
-          <span style={{ fontSize:12, color:'var(--weekly-text)', fontWeight:500 }}>
-            ✓ {completedTime}{a.bonusEarned ? ' +bônus' : ''}
-          </span>
+          <>
+            <span style={{ fontSize:12, color:'var(--weekly-text)', fontWeight:500 }}>
+              ✓ {completedTime}
+            </span>
+            {/* Bonus toggle */}
+            <button
+              onClick={handleToggleBonus}
+              disabled={toggling}
+              title={a.bonusEarned ? 'Remover ponto bônus' : 'Adicionar ponto bônus (feito sem lembrete)'}
+              style={{
+                fontSize:11, padding:'2px 8px', borderRadius:10,
+                border: a.bonusEarned
+                  ? '1px solid var(--daily-border)'
+                  : '1px dashed var(--border-strong)',
+                background: a.bonusEarned ? 'var(--daily-bg)' : 'transparent',
+                color: a.bonusEarned ? 'var(--daily-text)' : 'var(--text-hint)',
+                cursor:'pointer', fontFamily:'var(--font-body)',
+                opacity: toggling ? 0.5 : 1,
+                transition:'all .15s',
+              }}
+            >
+              {a.bonusEarned ? '⭐ bônus' : '+ bônus?'}
+            </button>
+          </>
         ) : a.penaltyApplied ? (
           <span style={{ fontSize:12, color:'#A32D2D' }}>penalidade</span>
         ) : (
