@@ -1,36 +1,36 @@
-# Casa Tarefas 🏠
+# Home Tasks
 
-Dashboard de tarefas domésticas para Clara e Bernardo com sistema de pontos e recompensas.
+Household task dashboard for kids, with points and rewards.
 
-## Estrutura
+## Structure
 
+```text
+home-task/
+├── service (backend)/     # Kotlin + Spring Boot (Railway)
+└── app (frontend)/    # React + TypeScript (Vercel)
 ```
-casa-tarefas/
-├── backend/     # Kotlin + Spring Boot (Railway)
-└── frontend/    # React + TypeScript (Vercel)
-```
 
-## Deploy gratuito
+## Deployment
 
-### Backend → Railway
-1. Crie conta em [railway.app](https://railway.app)
-2. New Project → Deploy from GitHub → selecione a pasta `backend`
-3. Adicione variável de ambiente: `FRONTEND_URL=https://seu-app.vercel.app`
-4. Railway detecta Kotlin automaticamente via `build.gradle.kts`
+### Backend on Railway
+1. Create an account at [railway.app](https://railway.app).
+2. Create a new project and deploy from GitHub, then select the `backend` folder.
+3. Add the environment variable `FRONTEND_URL=https://your-app.vercel.app`.
+4. Railway will detect the Kotlin project automatically through `build.gradle.kts`.
 
-### Frontend → Vercel
-1. Crie conta em [vercel.com](https://vercel.com)
-2. New Project → selecione este repositório → Root Directory: `frontend`
-3. Adicione variável de ambiente: `VITE_API_URL=https://seu-backend.railway.app`
-4. Deploy automático a cada push no GitHub
+### Frontend on Vercel
+1. Create an account at [vercel.com](https://vercel.com).
+2. Create a new project from this repository and set the root directory to `frontend`.
+3. Add the environment variable `VITE_API_URL=https://your-backend.railway.app`.
+4. Every push to GitHub will trigger an automatic deployment.
 
-## Desenvolvimento local
+## Local Development
 
 ### Backend
 ```bash
 cd backend
 ./gradlew bootRun
-# Roda em http://localhost:8080
+# Runs on http://localhost:8080
 ```
 
 ### Frontend
@@ -38,13 +38,13 @@ cd backend
 cd frontend
 npm install
 npm run dev
-# Roda em http://localhost:5173
+# Runs on http://localhost:5173
 ```
 
-## Funcionalidades
-- Dashboard com post-its por tipo (diária, semanal, conjunta, regra)
-- Drag & drop para atribuir tarefas entre Clara e Bernardo
-- Sistema de pontos com histórico semanal
-- Recompensas e consequências configuráveis
-- Horários com alertas visuais de prazo
-- Persistência em banco PostgreSQL (Railway)
+## Features
+- Dashboard with sticky notes by type: daily, weekly, shared, and rules
+- Drag-and-drop task assignment between Clara and Bernardo
+- Points system with weekly history
+- Configurable rewards and consequences
+- Time-based tasks with visual deadline alerts
+- PostgreSQL persistence on Railway
