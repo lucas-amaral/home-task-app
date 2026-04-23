@@ -25,8 +25,8 @@ export const boardApi = {
   getConfig: (): Promise<FamilyConfig> =>
     api.get('/config').then(r => r.data),
 
-  updateConfig: (child1Name: string, child2Name: string): Promise<FamilyConfig> =>
-    api.put('/config', { child1Name, child2Name }).then(r => r.data),
+  updateConfig: (config: FamilyConfig): Promise<FamilyConfig> =>
+    api.put('/config', config).then(r => r.data),
 
   // Assignments
   assign: (taskId: number, assignedTo: Assignee, date?: string, weekStart?: string): Promise<Assignment> =>
@@ -43,6 +43,9 @@ export const boardApi = {
 
   unpenalty: (id: number): Promise<Assignment> =>
     api.post(`/assignments/${id}/unpenalty`).then(r => r.data),
+
+  deleteAssignment: (id: number): Promise<void> =>
+    api.delete(`/assignments/${id}`).then(() => undefined),
 
   // History
   pointsHistory: (): Promise<PointLedgerDto[]> =>

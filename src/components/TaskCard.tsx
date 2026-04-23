@@ -10,6 +10,7 @@ interface Props {
   onAssign: (assignedTo: Assignee) => void
   onToggleComplete: (bonusEarned?: boolean) => void
   onPenalty: () => void
+  onDelete: () => void
   dragging?: boolean
 }
 
@@ -22,22 +23,21 @@ const TYPE: Record<TaskType, { bg: string; border: string; text: string; label: 
 
 export function TaskCard({
   assignment, child1Name, child2Name,
-  onAssign, onToggleComplete, onPenalty, dragging
+  onAssign, onToggleComplete, onPenalty, onDelete, dragging
 }: Props) {
   const [bonusPrompt, setBonusPrompt] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [showTooltip, setShowTooltip] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const s = TYPE[assignment.taskType]
   const isJoint = assignment.assignedTo === 'BOTH'
   const isCompleted = assignment.completed
 
-  // Format the completion date for display
   const completedDateLabel = isCompleted && assignment.completedAt
     ? format(new Date(assignment.completedAt), "dd/MM HH:mm", { locale: ptBR })
     : null
 
-  // Show completion date on the period date if not yet completed
   const periodDate = new Date(assignment.periodDate + 'T12:00:00')
   const periodLabel = assignment.taskType === 'WEEKLY'
     ? (() => {
@@ -47,15 +47,35 @@ export function TaskCard({
     })()
     : format(periodDate, 'dd/MM', { locale: ptBR })
 
+  // Deadline badge — show if deadlineDate is set and not yet completed
+  const deadlineBadge = assignment.deadlineDate && !isCompleted
+    ? (() => {
+      const dl = new Date(assignment.deadlineDate)
+      const overdue = dl < new Date()
+      const label = format(dl, "dd/MM HH:mm", { locale: ptBR })
+      return { label, overdue }
+    })()
+    : null
+
   function handleDoneClick() {
     if (isCompleted) { onToggleComplete(); return }
-    // Only prompt for bonus if not already prompting
     setBonusPrompt(true)
   }
 
   function confirmBonus(bonus: boolean) {
     onToggleComplete(bonus)
     setBonusPrompt(false)
+  }
+
+  function handleDelete() {
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      setMenuOpen(true)
+      return
+    }
+    onDelete()
+    setMenuOpen(false)
+    setConfirmDelete(false)
   }
 
   return (
@@ -103,6 +123,7 @@ export function TaskCard({
           {assignment.taskDescription}
         </div>
       )}
+
       {/* Header row */}
       <div style={{ display:'flex', alignItems:'flex-start', gap:7, marginBottom:5 }}>
         <div style={{ flex:1 }}>
@@ -121,8 +142,18 @@ export function TaskCard({
         </span>
       </div>
 
-      {/* Period date */}
+      {/* Period date + deadline badge */}
       <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:7 }}>
+        {deadlineBadge && (
+          <span style={{
+            fontSize:10, fontWeight:500, padding:'1px 7px', borderRadius:10,
+            background: deadlineBadge.overdue ? '#FCEBEB' : '#FFF8E1',
+            color: deadlineBadge.overdue ? '#A32D2D' : '#7A5C00',
+            border: `1px solid ${deadlineBadge.overdue ? '#F7C1C1' : '#F0D080'}`,
+          }}>
+            {deadlineBadge.overdue ? '⚠️' : '📅'} prazo {deadlineBadge.label}
+          </span>
+        )}
         <span style={{ fontSize:11, color:s.text, opacity:0.5, marginLeft:'auto' }}>
           {periodLabel}
         </span>
@@ -183,33 +214,69 @@ export function TaskCard({
 
         <div style={{ flex:1 }} />
 
-        {/* Penalty menu */}
-        {!isCompleted && assignment.assignedTo !== 'UNASSIGNED' && (
-          <div style={{ position:'relative' }}>
-            <button
-              onClick={() => setMenuOpen(v => !v)}
-              style={{ fontSize:15, color:s.text, opacity:0.45, padding:'0 3px', lineHeight:1 }}
-            >⋯</button>
-            {menuOpen && (
-              <div style={{
-                position:'absolute', right:0, bottom:'110%',
-                background:'var(--surface)', border:'1px solid var(--border-strong)',
-                borderRadius:'var(--radius-sm)', boxShadow:'var(--shadow-md)',
-                minWidth:168, zIndex:20,
-              }}>
+        {/* ⋯ menu */}
+        <div style={{ position:'relative' }}>
+          <button
+            onClick={() => { setMenuOpen(v => !v); setConfirmDelete(false) }}
+            style={{ fontSize:15, color:s.text, opacity:0.45, padding:'0 3px', lineHeight:1 }}
+          >⋯</button>
+          {menuOpen && (
+            <div style={{
+              position:'absolute', right:0, bottom:'110%',
+              background:'var(--surface)', border:'1px solid var(--border-strong)',
+              borderRadius:'var(--radius-sm)', boxShadow:'var(--shadow-md)',
+              minWidth:178, zIndex:20,
+            }}>
+              {/* Penalty option — only for incomplete assigned tasks */}
+              {!isCompleted && assignment.assignedTo !== 'UNASSIGNED' && (
                 <button
                   onClick={() => { onPenalty(); setMenuOpen(false) }}
                   style={{
                     display:'block', width:'100%', textAlign:'left',
                     padding:'8px 12px', fontSize:12, color:'#A32D2D',
+                    borderBottom:'1px solid var(--border)',
                   }}
-                >Apply penalty −1 pt</button>
-              </div>
-            )}
-          </div>
-        )}
+                >Aplicar penalidade −1 pt</button>
+              )}
 
-        {/* Done circle – always visible for BOTH and assigned tasks */}
+              {/* Delete — two-step confirm */}
+              {!confirmDelete ? (
+                <button
+                  onClick={handleDelete}
+                  style={{
+                    display:'block', width:'100%', textAlign:'left',
+                    padding:'8px 12px', fontSize:12, color:'var(--text-secondary)',
+                  }}
+                >🗑 Excluir tarefa</button>
+              ) : (
+                <div style={{ padding:'8px 12px' }}>
+                  <p style={{ fontSize:12, color:'#A32D2D', marginBottom:6, fontWeight:500 }}>
+                    Confirmar exclusão?
+                  </p>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <button
+                      onClick={handleDelete}
+                      style={{
+                        flex:1, padding:'4px 0', borderRadius:'var(--radius-sm)',
+                        background:'#A32D2D', color:'#fff', fontSize:12, fontWeight:500,
+                      }}
+                    >Sim</button>
+                    <button
+                      onClick={() => { setConfirmDelete(false); setMenuOpen(false) }}
+                      style={{
+                        flex:1, padding:'4px 0', borderRadius:'var(--radius-sm)',
+                        border:'1px solid var(--border-strong)', fontSize:12,
+                        color:'var(--text-secondary)',
+                      }}
+                    >Não</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Done circle */}
         {(isJoint || assignment.assignedTo !== 'UNASSIGNED') && (
           <button
             onClick={handleDoneClick}
@@ -223,7 +290,7 @@ export function TaskCard({
               display:'flex', alignItems:'center', justifyContent:'center',
               transition:'all .15s', flexShrink:0,
             }}
-            title={isCompleted ? 'Mark as not done' : 'Mark as done'}
+            title={isCompleted ? 'Marcar como não feito' : 'Marcar como feito'}
           >
             {isCompleted ? '✓' : ''}
           </button>

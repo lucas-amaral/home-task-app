@@ -106,11 +106,40 @@ export function useBoard() {
     }
   }, [board])
 
+  const deleteAssignment = useCallback(async (id: number) => {
+    if (!board) return
+    const existing = board.assignments.find(a => a.id === id)
+    if (!existing) return
+    try {
+      await boardApi.deleteAssignment(id)
+
+      // Reverse points locally if it was completed
+      const targets = existing.assignedTo === 'BOTH'
+        ? ['CHILD1', 'CHILD2']
+        : existing.assignedTo === 'UNASSIGNED' ? [] : [existing.assignedTo]
+
+      setBoard(prev => {
+        if (!prev) return prev
+        const newPts = { ...prev.weekPoints }
+        if (existing.completed) {
+          const pts = existing.points + (existing.bonusEarned ? 1 : 0)
+          targets.forEach(p => { newPts[p] = Math.max(0, (newPts[p] ?? 0) - pts) })
+        }
+        return {
+          ...prev,
+          weekPoints: newPts,
+          assignments: prev.assignments.filter(a => a.id !== id),
+        }
+      })
+    } catch (e) {
+      console.error('deleteAssignment error', e)
+    }
+  }, [board])
+
   /** Creates a one-off task (DAILY, active=true) and immediately assigns it to today */
   const addOneOff = useCallback(async (assignedTo: Assignee, name: string, points: number) => {
     if (!board) return
     try {
-      // 1. Create the task
       const task = await boardApi.createTask({
         name,
         type: 'DAILY',
@@ -118,9 +147,7 @@ export function useBoard() {
         defaultAssignee: assignedTo,
         points,
       })
-      // 2. Assign it to today — the board API returns the assignment row
       const assignment = await boardApi.assign(task.id, assignedTo, date)
-      // 3. Append to board
       setBoard(prev => prev ? {
         ...prev,
         assignments: [...prev.assignments, assignment],
@@ -140,7 +167,7 @@ export function useBoard() {
 
   return {
     board, loading, error,
-    assign, toggleComplete, applyPenalty, addOneOff,
+    assign, toggleComplete, applyPenalty, deleteAssignment, addOneOff,
     weekLabel, todayLabel,
     refetch: fetchBoard,
   }

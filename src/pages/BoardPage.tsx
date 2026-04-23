@@ -6,7 +6,11 @@ import { boardApi } from '../api/client'
 import type { Reward } from '../types'
 
 export function BoardPage() {
-  const { board, loading, error, assign, toggleComplete, applyPenalty, addOneOff, weekLabel, todayLabel, refetch } = useBoard()
+  const {
+    board, loading, error,
+    assign, toggleComplete, applyPenalty, deleteAssignment, addOneOff,
+    weekLabel, todayLabel, refetch,
+  } = useBoard()
   const [rewards, setRewards] = useState<Reward[]>([])
 
   useEffect(() => { boardApi.listRewards().then(setRewards).catch(() => {}) }, [])
@@ -62,6 +66,7 @@ export function BoardPage() {
                onAssign={assign}
                onToggleComplete={toggleComplete}
                onPenalty={applyPenalty}
+               onDelete={deleteAssignment}
                onAddOneOff={addOneOff}
              />
            </div>

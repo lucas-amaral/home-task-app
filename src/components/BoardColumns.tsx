@@ -13,6 +13,7 @@ interface Props {
   onAssign: (assignmentId: number, taskId: number, to: Assignee, periodDate: string, isDaily: boolean) => void
   onToggleComplete: (id: number, bonus?: boolean) => void
   onPenalty: (id: number) => void
+  onDelete: (id: number) => void
   onAddOneOff: (assignedTo: Assignee, name: string, points: number) => Promise<void>
 }
 
@@ -25,7 +26,7 @@ const COLUMNS: { id: ColId; labelKey: 'child1' | 'child2' | 'unassigned' | 'both
   { id: 'BOTH',       labelKey: 'both' },
 ]
 
-export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onAddOneOff }: Props) {
+export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onDelete, onAddOneOff }: Props) {
   const [activeId, setActiveId] = useState<number | null>(null)
   const [addingTo, setAddingTo] = useState<ColId | null>(null)
 
@@ -97,6 +98,7 @@ export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onA
                       onAssign={to => onAssign(a.id, a.taskId, to, a.periodDate, a.taskFrequency === 'DAILY')}
                       onToggleComplete={bonus => onToggleComplete(a.id, bonus)}
                       onPenalty={() => onPenalty(a.id)}
+                      onDelete={() => onDelete(a.id)}
                       dragging={activeId === a.id}
                     />
                   </DraggableWrapper>
@@ -122,7 +124,7 @@ export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onA
                 assignment={activeAssignment}
                 child1Name={board.child1Name}
                 child2Name={board.child2Name}
-                onAssign={() => {}} onToggleComplete={() => {}} onPenalty={() => {}}
+                onAssign={() => {}} onToggleComplete={() => {}} onPenalty={() => {}} onDelete={() => {}}
                 dragging
               />
             </div>

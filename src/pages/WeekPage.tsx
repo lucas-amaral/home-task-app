@@ -27,7 +27,6 @@ export function WeekPage() {
 
   useEffect(() => { loadSummary(weekDate) }, [weekDate, loadSummary])
 
-  /** Toggle bonus on a completed assignment and refresh points */
   const toggleBonus = useCallback(async (a: Assignment) => {
     if (!a.completed) return
     try {
@@ -70,6 +69,23 @@ export function WeekPage() {
         return { ...prev, assignments, points }
       })
     } catch (e) { console.error('removeLatePenalty', e) }
+  }, [])
+
+  const deleteAssignment = useCallback(async (a: Assignment) => {
+    try {
+      await boardApi.deleteAssignment(a.id)
+      setSummary(prev => {
+        if (!prev) return prev
+        const assignments = prev.assignments.filter(x => x.id !== a.id)
+        const points = { ...prev.points }
+        // Reverse points if was completed
+        if (a.completed) {
+          const pts = a.points + (a.bonusEarned ? 1 : 0)
+          targets(a).forEach(p => { points[p] = Math.max(0, (points[p] ?? 0) - pts) })
+        }
+        return { ...prev, assignments, points }
+      })
+    } catch (e) { console.error('deleteAssignment', e) }
   }, [])
 
   const weekLabel    = format(weekDate, "dd 'de' MMMM", { locale: ptBR })
@@ -150,6 +166,7 @@ export function WeekPage() {
             onToggleBonus={toggleBonus}
             onLatePenalty={applyLatePenalty}
             onRemovePenalty={removeLatePenalty}
+            onDelete={deleteAssignment}
           />
         </>
       )}
@@ -174,7 +191,7 @@ function targets(a: Assignment): string[] {
 
 // ── WeekGrid ──────────────────────────────────────────────────────────────────
 
-function WeekGrid({ assignments, child1Name, child2Name, weekStart, onToggleBonus, onLatePenalty, onRemovePenalty }: {
+function WeekGrid({ assignments, child1Name, child2Name, weekStart, onToggleBonus, onLatePenalty, onRemovePenalty, onDelete }: {
   assignments: Assignment[]
   child1Name: string
   child2Name: string
@@ -182,6 +199,7 @@ function WeekGrid({ assignments, child1Name, child2Name, weekStart, onToggleBonu
   onToggleBonus: (a: Assignment) => void
   onLatePenalty: (a: Assignment) => void
   onRemovePenalty: (a: Assignment) => void
+  onDelete: (a: Assignment) => void
 }) {
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart.getTime() + i * 86400000)
@@ -201,7 +219,8 @@ function WeekGrid({ assignments, child1Name, child2Name, weekStart, onToggleBonu
         <Section title="Tarefas semanais">
           {weeklyTasks.map(a => (
             <TaskRow key={a.id} a={a} child1Name={child1Name} child2Name={child2Name}
-              onToggleBonus={onToggleBonus} onLatePenalty={onLatePenalty} onRemovePenalty={onRemovePenalty} />
+              onToggleBonus={onToggleBonus} onLatePenalty={onLatePenalty}
+              onRemovePenalty={onRemovePenalty} onDelete={onDelete} />
           ))}
         </Section>
       )}
@@ -212,7 +231,8 @@ function WeekGrid({ assignments, child1Name, child2Name, weekStart, onToggleBonu
           <Section key={d} title={dayLabel(d)}>
             {tasks.map(a => (
               <TaskRow key={a.id} a={a} child1Name={child1Name} child2Name={child2Name}
-                onToggleBonus={onToggleBonus} onLatePenalty={onLatePenalty} onRemovePenalty={onRemovePenalty} />
+                onToggleBonus={onToggleBonus} onLatePenalty={onLatePenalty}
+                onRemovePenalty={onRemovePenalty} onDelete={onDelete} />
             ))}
           </Section>
         )
@@ -236,16 +256,18 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 // ── TaskRow ───────────────────────────────────────────────────────────────────
 
-function TaskRow({ a, child1Name, child2Name, onToggleBonus, onLatePenalty, onRemovePenalty }: {
+function TaskRow({ a, child1Name, child2Name, onToggleBonus, onLatePenalty, onRemovePenalty, onDelete }: {
   a: Assignment
   child1Name: string
   child2Name: string
   onToggleBonus: (a: Assignment) => void
   onLatePenalty: (a: Assignment) => void
   onRemovePenalty: (a: Assignment) => void
+  onDelete: (a: Assignment) => void
 }) {
-  const [togglingBonus,    setTogglingBonus]    = useState(false)
-  const [togglingPenalty,  setTogglingPenalty]  = useState(false)
+  const [togglingBonus,   setTogglingBonus]   = useState(false)
+  const [togglingPenalty, setTogglingPenalty] = useState(false)
+  const [confirmDelete,   setConfirmDelete]   = useState(false)
 
   const assigneeName =
     a.assignedTo === 'CHILD1' ? child1Name
@@ -255,6 +277,16 @@ function TaskRow({ a, child1Name, child2Name, onToggleBonus, onLatePenalty, onRe
 
   const completedTime = a.completedAt
     ? format(new Date(a.completedAt), 'HH:mm')
+    : null
+
+  // Deadline badge
+  const deadlineBadge = a.deadlineDate && !a.completed
+    ? (() => {
+      const dl = new Date(a.deadlineDate)
+      const overdue = dl < new Date()
+      const label = format(dl, "dd/MM HH:mm", { locale: ptBR })
+      return { label, overdue }
+    })()
     : null
 
   async function handleBonus() {
@@ -291,7 +323,19 @@ function TaskRow({ a, child1Name, child2Name, onToggleBonus, onLatePenalty, onRe
           textDecoration: a.completed ? 'line-through' : 'none',
           color: a.completed ? 'var(--text-hint)' : 'var(--text-primary)',
         }}>{a.taskName}</p>
-        <p style={{ fontSize:11, color:'var(--text-secondary)' }}>{assigneeName}</p>
+        <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
+          <p style={{ fontSize:11, color:'var(--text-secondary)' }}>{assigneeName}</p>
+          {deadlineBadge && (
+            <span style={{
+              fontSize:10, padding:'1px 6px', borderRadius:8,
+              background: deadlineBadge.overdue ? '#FCEBEB' : '#FFF8E1',
+              color: deadlineBadge.overdue ? '#A32D2D' : '#7A5C00',
+              border: `1px solid ${deadlineBadge.overdue ? '#F7C1C1' : '#F0D080'}`,
+            }}>
+              {deadlineBadge.overdue ? '⚠️' : '📅'} prazo {deadlineBadge.label}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Coluna direita */}
@@ -303,7 +347,6 @@ function TaskRow({ a, child1Name, child2Name, onToggleBonus, onLatePenalty, onRe
             </span>
 
             <div style={{ display:'flex', gap:5 }}>
-              {/* Bônus toggle */}
               <button
                 onClick={handleBonus}
                 disabled={togglingBonus}
@@ -320,7 +363,6 @@ function TaskRow({ a, child1Name, child2Name, onToggleBonus, onLatePenalty, onRe
                 {a.bonusEarned ? '⭐ bônus' : '+ bônus?'}
               </button>
 
-              {/* Penalidade de atraso — toggle: aplica / remove */}
               <button
                 onClick={handlePenaltyToggle}
                 disabled={togglingPenalty}
@@ -347,6 +389,40 @@ function TaskRow({ a, child1Name, child2Name, onToggleBonus, onLatePenalty, onRe
         <p style={{ fontSize:11, color:'var(--text-hint)' }}>
           +{a.points} ponto{a.points !== 1 ? 's' : ''}
         </p>
+
+        {/* Delete — two-step confirm */}
+        {!confirmDelete ? (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            title="Excluir tarefa"
+            style={{
+              fontSize:11, padding:'2px 8px', borderRadius:10,
+              border:'1px dashed var(--border-strong)',
+              background:'transparent', color:'var(--text-hint)',
+              cursor:'pointer', fontFamily:'var(--font-body)',
+            }}
+          >🗑 excluir</button>
+        ) : (
+          <div style={{ display:'flex', gap:4 }}>
+            <button
+              onClick={() => { onDelete(a); setConfirmDelete(false) }}
+              style={{
+                fontSize:11, padding:'2px 8px', borderRadius:10,
+                background:'#A32D2D', color:'#fff', fontWeight:500,
+                cursor:'pointer', fontFamily:'var(--font-body)',
+              }}
+            >confirmar</button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              style={{
+                fontSize:11, padding:'2px 8px', borderRadius:10,
+                border:'1px solid var(--border-strong)',
+                background:'transparent', color:'var(--text-secondary)',
+                cursor:'pointer', fontFamily:'var(--font-body)',
+              }}
+            >cancelar</button>
+          </div>
+        )}
       </div>
     </div>
   )
