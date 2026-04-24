@@ -10,6 +10,7 @@ const base: Assignment = {
   assignedTo: 'CHILD1', periodDate: '2024-01-15',
   completed: false, completedAt: null,
   bonusEarned: false, penaltyApplied: false, points: 1,
+  deadlineDate: null,
 }
 
 const props = {
@@ -19,6 +20,7 @@ const props = {
   onAssign: vi.fn(),
   onToggleComplete: vi.fn(),
   onPenalty: vi.fn(),
+  onDelete: vi.fn(),
 }
 
 describe('TaskCard', () => {

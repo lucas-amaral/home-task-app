@@ -58,8 +58,8 @@ export interface FamilyConfig {
    * WhatsApp via Callmebot — formato "5554999990000:APIKEY"
    * Deixar vazio para desativar notificações.
    */
-  child1Phone: string
-  child2Phone: string
+  child1Phone?: string | null
+  child2Phone?: string | null
 }
 
 export interface Reward {
