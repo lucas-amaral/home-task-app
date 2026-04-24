@@ -299,7 +299,7 @@ export function AdminPage() {
               <label style={labelStyle}>Telefone criança 1 (phone:apikey)</label>
               <input
                 style={{ ...inputStyle, borderColor: configDirty ? 'var(--child1-strong)' : undefined }}
-                value={config.child1Phone}
+                value={config.child1Phone ?? ''}
                 onChange={e => { setConfig(c => ({ ...c, child1Phone:e.target.value })); setConfigDirty(true) }}
                 placeholder="5554999990000:123456"
               />
@@ -308,7 +308,7 @@ export function AdminPage() {
               <label style={labelStyle}>Telefone criança 2 (phone:apikey)</label>
               <input
                 style={{ ...inputStyle, borderColor: configDirty ? 'var(--child2-strong)' : undefined }}
-                value={config.child2Phone}
+                value={config.child2Phone ?? ''}
                 onChange={e => { setConfig(c => ({ ...c, child2Phone:e.target.value })); setConfigDirty(true) }}
                 placeholder="5554999990000:123456"
               />
