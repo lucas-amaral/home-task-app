@@ -12,9 +12,9 @@ export interface Task {
   points: number
   timeWindow: string
   deadline: string
-  deadlineDate: string | null   // ISO datetime "yyyy-MM-ddTHH:mm"
   active: boolean
   sortOrder: number
+  oneOff: boolean
 }
 
 export interface Assignment {
@@ -25,13 +25,12 @@ export interface Assignment {
   taskType: TaskType
   taskFrequency: TaskFrequency
   assignedTo: Assignee
-  periodDate: string        // ISO date string — exact day for daily, Monday for weekly
+  periodDate: string
   completed: boolean
   completedAt: string | null
   bonusEarned: boolean
   penaltyApplied: boolean
   points: number
-  deadlineDate: string | null   // ISO datetime "yyyy-MM-ddTHH:mm"
 }
 
 export interface BoardDto {
@@ -40,7 +39,7 @@ export interface BoardDto {
   child1Name: string
   child2Name: string
   assignments: Assignment[]
-  weekPoints: Record<string, number>   // "CHILD1" -> 12
+  weekPoints: Record<string, number>
 }
 
 export interface WeekSummaryDto {
@@ -54,12 +53,6 @@ export interface WeekSummaryDto {
 export interface FamilyConfig {
   child1Name: string
   child2Name: string
-  /**
-   * WhatsApp via Callmebot — formato "5554999990000:APIKEY"
-   * Deixar vazio para desativar notificações.
-   */
-  child1Phone?: string | null
-  child2Phone?: string | null
 }
 
 export interface Reward {
@@ -84,5 +77,5 @@ export interface CreateTaskRequest {
   points?: number
   timeWindow?: string
   deadline?: string
-  deadlineDate?: string | null   // ISO datetime "yyyy-MM-ddTHH:mm"
+  oneOff?: boolean
 }

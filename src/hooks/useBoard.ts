@@ -21,7 +21,7 @@ export function useBoard() {
       const data = await boardApi.getBoard(date)
       setBoard(data)
     } catch {
-      setError('Could not load the board. Check backend connection.')
+      setError('Não foi possível carregar o quadro. Verifique a conexão com o servidor.')
     } finally {
       setLoading(false)
     }
@@ -38,8 +38,7 @@ export function useBoard() {
   ) => {
     try {
       const updated = await boardApi.assign(
-        taskId,
-        assignedTo,
+        taskId, assignedTo,
         isDaily ? periodDate : undefined,
         isDaily ? undefined : periodDate
       )
@@ -47,9 +46,7 @@ export function useBoard() {
         ...prev,
         assignments: prev.assignments.map(a => a.id === assignmentId ? updated : a)
       } : prev)
-    } catch (e) {
-      console.error('assign error', e)
-    }
+    } catch (e) { console.error('assign error', e) }
   }, [])
 
   const toggleComplete = useCallback(async (id: number, bonusEarned = false) => {
@@ -77,9 +74,7 @@ export function useBoard() {
           assignments: prev.assignments.map(a => a.id === id ? updated : a),
         }
       })
-    } catch (e) {
-      console.error('toggleComplete error', e)
-    }
+    } catch (e) { console.error('toggleComplete error', e) }
   }, [board])
 
   const applyPenalty = useCallback(async (id: number) => {
@@ -101,19 +96,25 @@ export function useBoard() {
           assignments: prev.assignments.map(a => a.id === id ? updated : a),
         }
       })
-    } catch (e) {
-      console.error('penalty error', e)
-    }
+    } catch (e) { console.error('penalty error', e) }
   }, [board])
 
+  /**
+   * Feature 1 — Delete an assignment from the board.
+   * Points are reversed server-side; we optimistically remove it from local state
+   * and refresh the week totals.
+   */
   const deleteAssignment = useCallback(async (id: number) => {
     if (!board) return
     const existing = board.assignments.find(a => a.id === id)
     if (!existing) return
     try {
       await boardApi.deleteAssignment(id)
-
-      // Reverse points locally if it was completed
+      // Reverse points optimistically if it was completed
+      const sign = -1
+      const pts = existing.completed
+        ? existing.points + (existing.bonusEarned ? 1 : 0)
+        : 0
       const targets = existing.assignedTo === 'BOTH'
         ? ['CHILD1', 'CHILD2']
         : existing.assignedTo === 'UNASSIGNED' ? [] : [existing.assignedTo]
@@ -121,22 +122,20 @@ export function useBoard() {
       setBoard(prev => {
         if (!prev) return prev
         const newPts = { ...prev.weekPoints }
-        if (existing.completed) {
-          const pts = existing.points + (existing.bonusEarned ? 1 : 0)
-          targets.forEach(p => { newPts[p] = Math.max(0, (newPts[p] ?? 0) - pts) })
-        }
+        if (pts > 0) targets.forEach(p => { newPts[p] = Math.max(0, (newPts[p] ?? 0) + sign * pts) })
         return {
           ...prev,
           weekPoints: newPts,
           assignments: prev.assignments.filter(a => a.id !== id),
         }
       })
-    } catch (e) {
-      console.error('deleteAssignment error', e)
-    }
+    } catch (e) { console.error('deleteAssignment error', e) }
   }, [board])
 
-  /** Creates a one-off task (DAILY, active=true) and immediately assigns it to today */
+  /**
+   * Feature 2 — Create a one-off task for today only.
+   * The task is flagged oneOff=true so BoardService never recreates it.
+   */
   const addOneOff = useCallback(async (assignedTo: Assignee, name: string, points: number) => {
     if (!board) return
     try {
@@ -146,21 +145,19 @@ export function useBoard() {
         frequency: 'DAILY',
         defaultAssignee: assignedTo,
         points,
+        oneOff: true,   // ← prevents recreation on subsequent days
       })
       const assignment = await boardApi.assign(task.id, assignedTo, date)
       setBoard(prev => prev ? {
         ...prev,
         assignments: [...prev.assignments, assignment],
       } : prev)
-    } catch (e) {
-      console.error('addOneOff error', e)
-    }
+    } catch (e) { console.error('addOneOff error', e) }
   }, [board, date])
 
   const weekLabel = board
     ? format(new Date(board.weekStart + 'T12:00:00'), "dd 'de' MMMM", { locale: ptBR })
     : ''
-
   const todayLabel = board
     ? format(new Date(board.date + 'T12:00:00'), "EEEE, dd 'de' MMMM", { locale: ptBR })
     : ''

@@ -24,13 +24,13 @@ export function BoardPage() {
           textAlign:'center', maxWidth:400,
         }}>
           <p style={{ fontSize:30, marginBottom:11 }}>⚠️</p>
-          <h2 style={{ fontSize:19, marginBottom:7 }}>Connection error</h2>
+          <h2 style={{ fontFamily:'var(--font-display)', fontSize:19, marginBottom:7 }}>Erro de conexão</h2>
           <p style={{ fontSize:13, color:'var(--text-secondary)', marginBottom:18 }}>{error}</p>
           <button onClick={refetch} style={{
             padding:'9px 22px', borderRadius:'var(--radius-md)',
             background:'var(--text-primary)', color:'var(--bg)',
             fontSize:13, fontWeight:500, border:'none', fontFamily:'var(--font-body)',
-          }}>Try again</button>
+          }}>Tentar novamente</button>
         </div>
       </div>
     )
@@ -38,12 +38,7 @@ export function BoardPage() {
 
   return (
     <div style={{ maxWidth:1160, margin:'0 auto', padding:'22px 14px 80px' }}>
-      <Header
-        todayLabel={todayLabel}
-        weekLabel={weekLabel}
-        onRefresh={refetch}
-        loading={loading}
-      />
+      <Header todayLabel={todayLabel} weekLabel={weekLabel} onRefresh={refetch} loading={loading} />
 
        {loading && !board ? (
          <p style={{ textAlign:'center', padding:'60px 0', color:'var(--text-hint)', fontSize:14 }}>

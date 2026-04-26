@@ -19,11 +19,11 @@ interface Props {
 
 type ColId = 'CHILD1' | 'UNASSIGNED' | 'CHILD2' | 'BOTH'
 
-const COLUMNS: { id: ColId; labelKey: 'child1' | 'child2' | 'unassigned' | 'both' }[] = [
-  { id: 'CHILD1',     labelKey: 'child1' },
-  { id: 'UNASSIGNED', labelKey: 'unassigned' },
-  { id: 'CHILD2',     labelKey: 'child2' },
-  { id: 'BOTH',       labelKey: 'both' },
+const COLUMNS: { id: ColId }[] = [
+  { id: 'CHILD1' },
+  { id: 'UNASSIGNED' },
+  { id: 'CHILD2' },
+  { id: 'BOTH' },
 ]
 
 export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onDelete, onAddOneOff }: Props) {
@@ -46,8 +46,7 @@ export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onD
       const target = over.id as Assignee
       const a = board.assignments.find(a => a.id === activeId)
       if (a && !a.completed && a.assignedTo !== target) {
-        const isDaily = a.taskFrequency === 'DAILY'
-        onAssign(a.id, a.taskId, target, a.periodDate, isDaily)
+        onAssign(a.id, a.taskId, target, a.periodDate, a.taskFrequency === 'DAILY')
       }
     }
     setActiveId(null)
@@ -56,9 +55,9 @@ export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onD
   const activeAssignment = activeId ? board.assignments.find(a => a.id === activeId) : null
 
   const colLabel = (col: ColId) => {
-    if (col === 'CHILD1') return board.child1Name
-    if (col === 'CHILD2') return board.child2Name
-    if (col === 'BOTH')   return 'Ambos'
+    if (col === 'CHILD1')     return board.child1Name
+    if (col === 'CHILD2')     return board.child2Name
+    if (col === 'BOTH')       return 'Ambos'
     return 'Não atribuído'
   }
 
@@ -72,11 +71,7 @@ export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onD
     <>
       <DndContext sensors={sensors} collisionDetection={closestCenter}
                   onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 12,
-        }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:12 }}>
           {COLUMNS.map(col => {
             const tasks = tasksForCol(col.id)
             const accent = colAccent(col.id)
@@ -109,7 +104,7 @@ export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onD
                     color:'var(--text-hint)', fontSize:12,
                     border:'1.5px dashed var(--border)', borderRadius:'var(--radius-md)',
                   }}>
-                    {col.id === 'UNASSIGNED' ? 'All assigned!' : 'Drop here'}
+                    {col.id === 'UNASSIGNED' ? 'Tudo atribuído!' : 'Solte aqui'}
                   </div>
                 )}
               </DroppableColumn>
@@ -132,15 +127,11 @@ export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onD
         </DragOverlay>
       </DndContext>
 
-      {/* One-off task modal */}
       {addingTo && (
         <OneOffModal
           colLabel={colLabel(addingTo)}
           accent={colAccent(addingTo)}
-          onConfirm={async (name, points) => {
-            await onAddOneOff(addingTo, name, points)
-            setAddingTo(null)
-          }}
+          onConfirm={async (name, points) => { await onAddOneOff(addingTo, name, points); setAddingTo(null) }}
           onClose={() => setAddingTo(null)}
         />
       )}
@@ -151,8 +142,7 @@ export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onD
 // ── One-off task modal ────────────────────────────────────────────────────────
 
 function OneOffModal({ colLabel, accent, onConfirm, onClose }: {
-  colLabel: string
-  accent: string
+  colLabel: string; accent: string
   onConfirm: (name: string, points: number) => Promise<void>
   onClose: () => void
 }) {
@@ -163,35 +153,24 @@ function OneOffModal({ colLabel, accent, onConfirm, onClose }: {
   async function handleSubmit() {
     if (!name.trim()) return
     setSaving(true)
-    try {
-      await onConfirm(name.trim(), points)
-    } finally {
-      setSaving(false)
-    }
+    try { await onConfirm(name.trim(), points) } finally { setSaving(false) }
   }
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position:'fixed', inset:0, background:'rgba(0,0,0,0.35)',
-        display:'flex', alignItems:'center', justifyContent:'center',
-        zIndex:100, backdropFilter:'blur(2px)',
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          background:'var(--surface)', borderRadius:'var(--radius-lg)',
-          padding:'24px 26px', width:340, boxShadow:'var(--shadow-md)',
-          border:`2px solid ${accent}`,
-          animation:'fadeIn .15s ease',
-        }}
-      >
+    <div onClick={onClose} style={{
+      position:'fixed', inset:0, background:'rgba(0,0,0,0.35)',
+      display:'flex', alignItems:'center', justifyContent:'center',
+      zIndex:100, backdropFilter:'blur(2px)',
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background:'var(--surface)', borderRadius:'var(--radius-lg)',
+        padding:'24px 26px', width:340, boxShadow:'var(--shadow-md)',
+        border:`2px solid ${accent}`, animation:'fadeIn .15s ease',
+      }}>
         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16 }}>
           <div style={{ width:10, height:10, borderRadius:'50%', background:accent }} />
-          <h3 style={{ fontSize:15, fontWeight:600, color:'var(--text-primary)' }}>
-            Nova tarefa para <span style={{ color: accent }}>{colLabel}</span>
+          <h3 style={{ fontSize:15, fontWeight:600 }}>
+            Nova tarefa para <span style={{ color:accent }}>{colLabel}</span>
           </h3>
         </div>
 
@@ -203,8 +182,7 @@ function OneOffModal({ colLabel, accent, onConfirm, onClose }: {
           Nome da tarefa
         </label>
         <input
-          autoFocus
-          value={name}
+          autoFocus value={name}
           onChange={e => setName(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleSubmit(); if (e.key === 'Escape') onClose() }}
           placeholder="Ex: Regar as plantas"
@@ -221,41 +199,30 @@ function OneOffModal({ colLabel, accent, onConfirm, onClose }: {
         </label>
         <div style={{ display:'flex', gap:6, marginBottom:20 }}>
           {[1, 2, 3, 5].map(p => (
-            <button
-              key={p}
-              onClick={() => setPoints(p)}
-              style={{
-                flex:1, padding:'7px 0', borderRadius:'var(--radius-sm)',
-                border: points === p ? `2px solid ${accent}` : '1.5px solid var(--border)',
-                background: points === p ? `color-mix(in srgb, ${accent} 12%, white)` : 'var(--bg)',
-                fontSize:13, fontWeight: points === p ? 600 : 400,
-                color: points === p ? accent : 'var(--text-secondary)',
-                transition:'all .1s',
-              }}
-            >+{p}</button>
+            <button key={p} onClick={() => setPoints(p)} style={{
+              flex:1, padding:'7px 0', borderRadius:'var(--radius-sm)',
+              border: points === p ? `2px solid ${accent}` : '1.5px solid var(--border)',
+              background: points === p ? `color-mix(in srgb, ${accent} 12%, white)` : 'var(--bg)',
+              fontSize:13, fontWeight: points === p ? 600 : 400,
+              color: points === p ? accent : 'var(--text-secondary)',
+              transition:'all .1s',
+            }}>+{p}</button>
           ))}
         </div>
 
         <div style={{ display:'flex', gap:8 }}>
-          <button
-            onClick={onClose}
-            style={{
-              flex:1, padding:'9px 0', borderRadius:'var(--radius-sm)',
-              border:'1px solid var(--border)', fontSize:13,
-              color:'var(--text-secondary)', background:'var(--bg)',
-            }}
-          >Cancelar</button>
-          <button
-            onClick={handleSubmit}
-            disabled={!name.trim() || saving}
-            style={{
-              flex:2, padding:'9px 0', borderRadius:'var(--radius-sm)',
-              background: name.trim() ? accent : 'var(--border)',
-              color: name.trim() ? 'white' : 'var(--text-hint)',
-              fontSize:13, fontWeight:500, border:'none',
-              opacity: saving ? 0.7 : 1, transition:'all .15s',
-            }}
-          >{saving ? 'Salvando…' : 'Adicionar tarefa'}</button>
+          <button onClick={onClose} style={{
+            flex:1, padding:'9px 0', borderRadius:'var(--radius-sm)',
+            border:'1px solid var(--border)', fontSize:13,
+            color:'var(--text-secondary)', background:'var(--bg)',
+          }}>Cancelar</button>
+          <button onClick={handleSubmit} disabled={!name.trim() || saving} style={{
+            flex:2, padding:'9px 0', borderRadius:'var(--radius-sm)',
+            background: name.trim() ? accent : 'var(--border)',
+            color: name.trim() ? 'white' : 'var(--text-hint)',
+            fontSize:13, fontWeight:500, border:'none',
+            opacity: saving ? 0.7 : 1, transition:'all .15s',
+          }}>{saving ? 'Salvando…' : 'Adicionar tarefa'}</button>
         </div>
       </div>
     </div>
@@ -273,16 +240,14 @@ function DroppableColumn({ colId, label, accent, count, children, onAddClick }: 
 
   return (
     <div ref={setNodeRef} style={{
-      background: isOver ? 'var(--surface-2)' : 'var(--surface-2)',
-      borderRadius: 'var(--radius-lg)',
-      padding: '13px 11px 0',
-      border: `1.5px solid ${isOver ? accent : 'var(--border)'}`,
-      minHeight: 260,
-      transition: 'border-color .15s, background .15s',
-      display: 'flex', flexDirection: 'column',
-      ...(isOver ? { background: accent === 'var(--text-hint)' ? '#F0EDE8' : `color-mix(in srgb, ${accent} 8%, white)` } : {})
+      background: 'var(--surface-2)',
+      borderRadius:'var(--radius-lg)',
+      padding:'13px 11px 0',
+      border:`1.5px solid ${isOver ? accent : 'var(--border)'}`,
+      minHeight:260, transition:'border-color .15s, background .15s',
+      display:'flex', flexDirection:'column',
+      ...(isOver ? { background:`color-mix(in srgb, ${accent} 8%, white)` } : {})
     }}>
-      {/* Column header */}
       <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:13 }}>
         <div style={{ width:8, height:8, borderRadius:'50%', background:accent, flexShrink:0 }} />
         <p style={{ fontSize:11, fontWeight:500, textTransform:'uppercase', letterSpacing:'.07em', color:'var(--text-secondary)' }}>
@@ -294,10 +259,8 @@ function DroppableColumn({ colId, label, accent, count, children, onAddClick }: 
         }}>{count}</span>
       </div>
 
-      {/* Cards */}
       <div style={{ flex:1, paddingBottom:4 }}>{children}</div>
 
-      {/* Add one-off footer */}
       <div
         onMouseEnter={() => setHoveringFooter(true)}
         onMouseLeave={() => setHoveringFooter(false)}
@@ -305,12 +268,11 @@ function DroppableColumn({ colId, label, accent, count, children, onAddClick }: 
         style={{
           marginTop:4, padding: hoveringFooter ? '8px 6px' : '4px 6px',
           borderTop: hoveringFooter ? `1px dashed ${accent}` : '1px dashed transparent',
-          cursor:'pointer',
-          transition:'all .18s',
+          cursor:'pointer', transition:'all .18s',
           display:'flex', alignItems:'center', justifyContent:'center', gap:5,
           color: hoveringFooter ? accent : 'transparent',
           fontSize:12, fontWeight:500,
-          borderRadius: '0 0 var(--radius-lg) var(--radius-lg)',
+          borderRadius:'0 0 var(--radius-lg) var(--radius-lg)',
           background: hoveringFooter ? `color-mix(in srgb, ${accent} 6%, white)` : 'transparent',
           userSelect:'none',
         }}

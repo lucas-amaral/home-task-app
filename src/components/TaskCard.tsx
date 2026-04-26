@@ -40,22 +40,8 @@ export function TaskCard({
 
   const periodDate = new Date(assignment.periodDate + 'T12:00:00')
   const periodLabel = assignment.taskType === 'WEEKLY'
-    ? (() => {
-      const startDate = periodDate
-      const endDate = addDays(periodDate, 6)
-      return `${format(startDate, 'dd')}–${format(endDate, 'dd MMM', { locale: ptBR })}`
-    })()
+    ? `${format(periodDate, 'dd')}–${format(addDays(periodDate, 6), 'dd MMM', { locale: ptBR })}`
     : format(periodDate, 'dd/MM', { locale: ptBR })
-
-  // Deadline badge — show if deadlineDate is set and not yet completed
-  const deadlineBadge = assignment.deadlineDate && !isCompleted
-    ? (() => {
-      const dl = new Date(assignment.deadlineDate)
-      const overdue = dl < new Date()
-      const label = format(dl, "dd/MM HH:mm", { locale: ptBR })
-      return { label, overdue }
-    })()
-    : null
 
   function handleDoneClick() {
     if (isCompleted) { onToggleComplete(); return }
@@ -67,14 +53,16 @@ export function TaskCard({
     setBonusPrompt(false)
   }
 
-  function handleDelete() {
+  function handleDeleteClick() {
     if (!confirmDelete) {
+      // First click: show confirmation state
       setConfirmDelete(true)
-      setMenuOpen(true)
+      setMenuOpen(false)
+      // Auto-reset confirmation after 3 s if not confirmed
+      setTimeout(() => setConfirmDelete(false), 3000)
       return
     }
     onDelete()
-    setMenuOpen(false)
     setConfirmDelete(false)
   }
 
@@ -83,18 +71,18 @@ export function TaskCard({
       data-testid="task-card"
       style={{
         background: s.bg,
-        border: `1.5px solid ${s.border}`,
+        border: `1.5px solid ${confirmDelete ? '#A32D2D' : s.border}`,
         borderRadius: 'var(--radius-md)',
         padding: '11px 13px',
         marginBottom: 9,
         opacity: dragging ? 0.35 : isCompleted ? 0.58 : 1,
-        transition: 'opacity .2s, transform .15s, box-shadow .15s',
+        transition: 'opacity .2s, transform .15s, box-shadow .15s, border-color .2s',
         cursor: 'grab',
         position: 'relative',
         animation: 'fadeIn .22s ease',
       }}
       onMouseEnter={e => {
-        if (!isCompleted) {
+        if (!isCompleted && !confirmDelete) {
           const el = e.currentTarget as HTMLDivElement
           el.style.transform = 'rotate(-0.6deg) translateY(-2px)'
           el.style.boxShadow = 'var(--shadow-md)'
@@ -111,24 +99,50 @@ export function TaskCard({
       {/* Tooltip */}
       {showTooltip && assignment.taskDescription && (
         <div style={{
-          position: 'absolute', bottom: '100%', left: 0, right: 0,
+          position:'absolute', bottom:'100%', left:0, right:0,
           background: s.border, color: s.bg,
-          padding: '8px 10px', borderRadius: 'var(--radius-sm)',
-          fontSize: 12, marginBottom: 6, zIndex: 50,
-          boxShadow: 'var(--shadow-md)',
-          pointerEvents: 'none',
-          lineHeight: 1.4,
-          wordWrap: 'break-word',
+          padding:'8px 10px', borderRadius:'var(--radius-sm)',
+          fontSize:12, marginBottom:6, zIndex:50,
+          boxShadow:'var(--shadow-md)', pointerEvents:'none', lineHeight:1.4,
         }}>
           {assignment.taskDescription}
         </div>
       )}
 
-      {/* Header row */}
+      {/* Confirm-delete banner */}
+      {confirmDelete && (
+        <div style={{
+          marginBottom:8, padding:'6px 10px',
+          background:'#FCEBEB', border:'1px solid #F7C1C1',
+          borderRadius:'var(--radius-sm)',
+          display:'flex', alignItems:'center', justifyContent:'space-between', gap:8,
+        }}>
+          <span style={{ fontSize:12, color:'#A32D2D' }}>Confirmar exclusão?</span>
+          <div style={{ display:'flex', gap:6 }}>
+            <button
+              onClick={handleDeleteClick}
+              style={{
+                fontSize:11, padding:'2px 8px', borderRadius:8,
+                background:'#A32D2D', color:'white', border:'none', cursor:'pointer',
+              }}
+            >Excluir</button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              style={{
+                fontSize:11, padding:'2px 8px', borderRadius:8,
+                border:'1px solid #F7C1C1', background:'transparent',
+                color:'#A32D2D', cursor:'pointer',
+              }}
+            >Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
       <div style={{ display:'flex', alignItems:'flex-start', gap:7, marginBottom:5 }}>
         <div style={{ flex:1 }}>
           <p style={{
-            fontSize:13, fontWeight:500, color: s.text, lineHeight:1.35,
+            fontSize:13, fontWeight:500, color:s.text, lineHeight:1.35,
             textDecoration: isCompleted ? 'line-through' : 'none',
           }}>
             {assignment.taskName}
@@ -136,24 +150,14 @@ export function TaskCard({
         </div>
         <span style={{
           fontSize:10, fontWeight:500, padding:'2px 7px', borderRadius:20,
-          background: s.border, color: s.bg, whiteSpace:'nowrap', flexShrink:0,
+          background:s.border, color:s.bg, whiteSpace:'nowrap', flexShrink:0,
         }}>
           {s.label} +{assignment.points}
         </span>
       </div>
 
-      {/* Period date + deadline badge */}
+      {/* Period */}
       <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:7 }}>
-        {deadlineBadge && (
-          <span style={{
-            fontSize:10, fontWeight:500, padding:'1px 7px', borderRadius:10,
-            background: deadlineBadge.overdue ? '#FCEBEB' : '#FFF8E1',
-            color: deadlineBadge.overdue ? '#A32D2D' : '#7A5C00',
-            border: `1px solid ${deadlineBadge.overdue ? '#F7C1C1' : '#F0D080'}`,
-          }}>
-            {deadlineBadge.overdue ? '⚠️' : '📅'} prazo {deadlineBadge.label}
-          </span>
-        )}
         <span style={{ fontSize:11, color:s.text, opacity:0.5, marginLeft:'auto' }}>
           {periodLabel}
         </span>
@@ -171,8 +175,8 @@ export function TaskCard({
           <div style={{ display:'flex', gap:6 }}>
             <button onClick={() => confirmBonus(true)} style={{
               flex:1, padding:'4px 0', borderRadius:'var(--radius-sm)',
-              background: s.border, color: s.bg, fontSize:12, fontWeight:500,
-            }}>Sim +1 bonus</button>
+              background:s.border, color:s.bg, fontSize:12, fontWeight:500,
+            }}>Sim +1 bônus</button>
             <button onClick={() => confirmBonus(false)} style={{
               flex:1, padding:'4px 0', borderRadius:'var(--radius-sm)',
               border:`1px solid ${s.border}`, color:s.text, fontSize:12,
@@ -181,9 +185,8 @@ export function TaskCard({
         </div>
       )}
 
-      {/* Footer: avatars + completion date + done button */}
+      {/* Footer */}
       <div style={{ display:'flex', alignItems:'center', gap:7 }}>
-        {/* Avatar(s) */}
         {isJoint ? (
           <div style={{ display:'flex', gap:4, alignItems:'center' }}>
             <Avatar label={child1Name.slice(0,2).toUpperCase()} color="child1" active />
@@ -205,78 +208,48 @@ export function TaskCard({
           </div>
         )}
 
-        {/* Completion timestamp */}
         {completedDateLabel && (
-          <span style={{ fontSize:10, color:s.text, opacity:0.55 }}>
-            ✓ {completedDateLabel}
-          </span>
+          <span style={{ fontSize:10, color:s.text, opacity:0.55 }}>✓ {completedDateLabel}</span>
         )}
 
         <div style={{ flex:1 }} />
 
         {/* ⋯ menu */}
-        <div style={{ position:'relative' }}>
-          <button
-            onClick={() => { setMenuOpen(v => !v); setConfirmDelete(false) }}
-            style={{ fontSize:15, color:s.text, opacity:0.45, padding:'0 3px', lineHeight:1 }}
-          >⋯</button>
-          {menuOpen && (
-            <div style={{
-              position:'absolute', right:0, bottom:'110%',
-              background:'var(--surface)', border:'1px solid var(--border-strong)',
-              borderRadius:'var(--radius-sm)', boxShadow:'var(--shadow-md)',
-              minWidth:178, zIndex:20,
-            }}>
-              {/* Penalty option — only for incomplete assigned tasks */}
-              {!isCompleted && assignment.assignedTo !== 'UNASSIGNED' && (
+        {!confirmDelete && assignment.assignedTo !== 'UNASSIGNED' && (
+          <div style={{ position:'relative' }}>
+            <button
+              onClick={() => setMenuOpen(v => !v)}
+              style={{ fontSize:15, color:s.text, opacity:0.45, padding:'0 3px', lineHeight:1 }}
+            >⋯</button>
+            {menuOpen && (
+              <div style={{
+                position:'absolute', right:0, bottom:'110%',
+                background:'var(--surface)', border:'1px solid var(--border-strong)',
+                borderRadius:'var(--radius-sm)', boxShadow:'var(--shadow-md)',
+                minWidth:180, zIndex:20,
+              }}>
+                {!isCompleted && (
+                  <button
+                    onClick={() => { onPenalty(); setMenuOpen(false) }}
+                    style={{
+                      display:'block', width:'100%', textAlign:'left',
+                      padding:'8px 12px', fontSize:12, color:'#A32D2D',
+                      borderBottom:'1px solid var(--border)',
+                    }}
+                  >Aplicar penalidade −1 pt</button>
+                )}
                 <button
-                  onClick={() => { onPenalty(); setMenuOpen(false) }}
+                  onClick={() => { setMenuOpen(false); handleDeleteClick() }}
                   style={{
                     display:'block', width:'100%', textAlign:'left',
                     padding:'8px 12px', fontSize:12, color:'#A32D2D',
-                    borderBottom:'1px solid var(--border)',
-                  }}
-                >Aplicar penalidade −1 pt</button>
-              )}
-
-              {/* Delete — two-step confirm */}
-              {!confirmDelete ? (
-                <button
-                  onClick={handleDelete}
-                  style={{
-                    display:'block', width:'100%', textAlign:'left',
-                    padding:'8px 12px', fontSize:12, color:'var(--text-secondary)',
                   }}
                 >🗑 Excluir tarefa</button>
-              ) : (
-                <div style={{ padding:'8px 12px' }}>
-                  <p style={{ fontSize:12, color:'#A32D2D', marginBottom:6, fontWeight:500 }}>
-                    Confirmar exclusão?
-                  </p>
-                  <div style={{ display:'flex', gap:6 }}>
-                    <button
-                      onClick={handleDelete}
-                      style={{
-                        flex:1, padding:'4px 0', borderRadius:'var(--radius-sm)',
-                        background:'#A32D2D', color:'#fff', fontSize:12, fontWeight:500,
-                      }}
-                    >Sim</button>
-                    <button
-                      onClick={() => { setConfirmDelete(false); setMenuOpen(false) }}
-                      style={{
-                        flex:1, padding:'4px 0', borderRadius:'var(--radius-sm)',
-                        border:'1px solid var(--border-strong)', fontSize:12,
-                        color:'var(--text-secondary)',
-                      }}
-                    >Não</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* Done circle */}
         {(isJoint || assignment.assignedTo !== 'UNASSIGNED') && (
           <button
             onClick={handleDoneClick}
@@ -290,15 +263,14 @@ export function TaskCard({
               display:'flex', alignItems:'center', justifyContent:'center',
               transition:'all .15s', flexShrink:0,
             }}
-            title={isCompleted ? 'Marcar como não feito' : 'Marcar como feito'}
+            title={isCompleted ? 'Desmarcar como feito' : 'Marcar como feito'}
           >
             {isCompleted ? '✓' : ''}
           </button>
         )}
       </div>
 
-      {/* Penalty badge */}
-      {assignment.penaltyApplied && (
+      {assignment.penaltyApplied && !confirmDelete && (
         <span style={{
           position:'absolute', top:7, right:7,
           fontSize:10, background:'#FCEBEB', color:'#A32D2D',
@@ -326,18 +298,13 @@ export function Avatar({ label, color, active, size = 23, onClick }: AvatarProps
       disabled={!onClick}
       style={{
         width:size, height:size, borderRadius:'50%',
-        background: active
-          ? `var(--${color}-mid)`
-          : 'var(--surface-2)',
-        border: `1.5px solid ${active ? `var(--${color}-strong)` : 'var(--border)'}`,
+        background: active ? `var(--${color}-mid)` : 'var(--surface-2)',
+        border:`1.5px solid ${active ? `var(--${color}-strong)` : 'var(--border)'}`,
         color: active ? `var(--${color}-dark)` : 'var(--text-hint)',
-        fontSize: size * 0.37,
-        fontWeight:500,
+        fontSize:size * 0.37, fontWeight:500,
         display:'flex', alignItems:'center', justifyContent:'center',
         cursor: onClick ? 'pointer' : 'default',
-        transition:'all .15s',
-        flexShrink:0,
-        fontFamily:'var(--font-body)',
+        transition:'all .15s', flexShrink:0, fontFamily:'var(--font-body)',
       }}
       onMouseEnter={e => { if (onClick) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.14)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = '' }}
