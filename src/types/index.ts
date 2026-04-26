@@ -79,3 +79,16 @@ export interface CreateTaskRequest {
   deadline?: string
   oneOff?: boolean
 }
+
+export interface UpdateTaskRequest {
+  name: string
+  description?: string
+  type: TaskType
+  frequency: TaskFrequency
+  defaultAssignee?: Assignee
+  points?: number
+  timeWindow?: string
+  deadline?: string
+  sortOrder?: number
+  active?: boolean
+}

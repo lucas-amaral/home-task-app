@@ -1,7 +1,7 @@
 import axios from 'axios'
 import type {
   BoardDto, Task, Assignment, Reward, PointLedgerDto,
-  FamilyConfig, CreateTaskRequest, Assignee, WeekSummaryDto
+  FamilyConfig, CreateTaskRequest, UpdateTaskRequest, Assignee, WeekSummaryDto
 } from '../types'
 
 const api = axios.create({
@@ -20,6 +20,12 @@ export const boardApi = {
 
   createTask: (req: CreateTaskRequest): Promise<Task> =>
     api.post('/tasks', req).then(r => r.data),
+
+  updateTask: (id: number, req: UpdateTaskRequest): Promise<Task> =>
+    api.put(`/tasks/${id}`, req).then(r => r.data),
+
+  deleteTask: (id: number): Promise<void> =>
+    api.delete(`/tasks/${id}`).then(() => undefined),
 
   // Family config
   getConfig: (): Promise<FamilyConfig> =>
@@ -44,7 +50,6 @@ export const boardApi = {
   unpenalty: (id: number): Promise<Assignment> =>
     api.post(`/assignments/${id}/unpenalty`).then(r => r.data),
 
-  /** Feature 1 — Delete an assignment (reverses points server-side if completed) */
   deleteAssignment: (id: number): Promise<void> =>
     api.delete(`/assignments/${id}`).then(() => undefined),
 
