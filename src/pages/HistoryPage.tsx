@@ -6,7 +6,7 @@ import type { PointLedgerDto, FamilyConfig } from '../types'
 
 export function HistoryPage() {
   const [history, setHistory] = useState<PointLedgerDto[]>([])
-  const [config, setConfig] = useState<FamilyConfig>({ child1Name: 'Filho 1', child2Name: 'Filho 2', child1Phone: null, child2Phone: null })
+  const [config, setConfig] = useState<FamilyConfig>({ child1Name: 'Filho 1', child2Name: 'Filho 2' })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {

@@ -222,11 +222,11 @@ export function WeekPage() {
 interface GridProps {
   summary: WeekSummaryDto
   weekStart: Date
-  onToggleComplete: (a: Assignment, bonus?: boolean) => void
-  onReassign: (a: Assignment, to: Assignee) => void
-  onToggleBonus: (a: Assignment) => void
-  onTogglePenalty: (a: Assignment) => void
-  onDelete: (a: Assignment) => void
+  onToggleComplete: (a: Assignment, bonus?: boolean) => Promise<void>
+  onReassign: (a: Assignment, to: Assignee) => Promise<void>
+  onToggleBonus: (a: Assignment) => Promise<void>
+  onTogglePenalty: (a: Assignment) => Promise<void>
+  onDelete: (a: Assignment) => Promise<void>
 }
 
 function WeekGrid({ summary, weekStart, onToggleComplete, onReassign, onToggleBonus, onTogglePenalty, onDelete }: GridProps) {
@@ -288,11 +288,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 interface RowProps {
   a: Assignment
   summary: WeekSummaryDto
-  onToggleComplete: (a: Assignment, bonus?: boolean) => void
-  onReassign: (a: Assignment, to: Assignee) => void
-  onToggleBonus: (a: Assignment) => void
-  onTogglePenalty: (a: Assignment) => void
-  onDelete: (a: Assignment) => void
+  onToggleComplete: (a: Assignment, bonus?: boolean) => Promise<void>
+  onReassign: (a: Assignment, to: Assignee) => Promise<void>
+  onToggleBonus: (a: Assignment) => Promise<void>
+  onTogglePenalty: (a: Assignment) => Promise<void>
+  onDelete: (a: Assignment) => Promise<void>
 }
 
 function TaskRow({ a, summary, onToggleComplete, onReassign, onToggleBonus, onTogglePenalty, onDelete }: RowProps) {

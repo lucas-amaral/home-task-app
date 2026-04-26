@@ -44,7 +44,7 @@ const TYPE_COLOR: Record<TaskType, string> = {
   JOINT:'var(--joint-border)', RULE:'var(--rule-border)',
 }
 
-const emptyConfig: FamilyConfig = { child1Name:'', child2Name:'', child1Phone:'', child2Phone:'' }
+const emptyConfig: FamilyConfig = { child1Name:'', child2Name:'' }
 
 export function AdminPage() {
   const [tab, setTab] = useState<'tasks'|'rewards'|'config'>('tasks')
@@ -59,7 +59,7 @@ export function AdminPage() {
   const [form, setForm] = useState({
     name:'', description:'', type:'DAILY' as TaskType,
     frequency:'DAILY' as TaskFrequency, defaultAssignee:'UNASSIGNED' as Assignee,
-    points:1, timeWindow:'', deadline:'', deadlineDate:'',
+    points:1, timeWindow:'', deadline:'',
   })
 
   useEffect(() => {
@@ -77,12 +77,9 @@ export function AdminPage() {
     if (!form.name.trim()) return
     setSaving(true)
     try {
-      const t = await boardApi.createTask({
-        ...form,
-        deadlineDate: form.deadlineDate || null,
-      })
+      const t = await boardApi.createTask(form)
       setTasks(p => [...p, t])
-      setForm({ name:'', description:'', type:'DAILY', frequency:'DAILY', defaultAssignee:'UNASSIGNED', points:1, timeWindow:'', deadline:'', deadlineDate:'' })
+      setForm({ name:'', description:'', type:'DAILY', frequency:'DAILY', defaultAssignee:'UNASSIGNED', points:1, timeWindow:'', deadline:'' })
       setShowForm(false)
       showFlash('Tarefa criada!')
     } catch { alert('Erro ao salvar a tarefa.') }
@@ -92,7 +89,7 @@ export function AdminPage() {
   async function saveConfig() {
     setSaving(true)
     try {
-      const updated = await boardApi.updateConfig(config)
+      const updated = await boardApi.updateConfig(config.child1Name, config.child2Name)
       setConfig(updated)
       setConfigDirty(false)
       showFlash('Configurações atualizadas!')
@@ -189,17 +186,6 @@ export function AdminPage() {
                   <label style={labelStyle}>Janela de horário</label>
                   <input style={inputStyle} value={form.timeWindow} onChange={e => setForm(f => ({ ...f, timeWindow:e.target.value }))} placeholder="ex.: 06:30 – 07:30" />
                 </div>
-                <div style={{ gridColumn:'1/-1' }}>
-                  <label style={labelStyle}>Data e hora limite (deadline) 📅</label>
-                  <input
-                    style={inputStyle} type="datetime-local"
-                    value={form.deadlineDate}
-                    onChange={e => setForm(f => ({ ...f, deadlineDate:e.target.value }))}
-                  />
-                  <p style={{ fontSize:11, color:'var(--text-hint)', marginTop:4 }}>
-                    Se preenchida, envia notificação WhatsApp quando a tarefa não for concluída até esta data/hora (requer telefone cadastrado em "Família").
-                  </p>
-                </div>
               </div>
               <button onClick={saveTask} disabled={saving || !form.name.trim()} style={{
                 marginTop:16, padding:'9px 22px', borderRadius:'var(--radius-md)',
@@ -226,7 +212,6 @@ export function AdminPage() {
                   <p style={{ fontSize:11, color:'var(--text-hint)', marginTop:2 }}>
                     {TYPE_LABEL[t.type]} · {FREQ_LABEL[t.frequency]} · {t.points} ponto{t.points !== 1 ? 's' : ''}
                     {t.deadline ? ` · ${t.deadline}` : ''}
-                    {t.deadlineDate ? ` · prazo: ${new Date(t.deadlineDate).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' })}` : ''}
                     {t.defaultAssignee !== 'UNASSIGNED' ? ` · padrão: ${ASSIGNEE_LABEL[t.defaultAssignee]}` : ''}
                   </p>
                 </div>
@@ -285,36 +270,6 @@ export function AdminPage() {
               />
             </div>
           </div>
-
-          <h3 style={{ fontFamily:'var(--font-display)', fontSize:18, marginBottom:6 }}>WhatsApp (Callmebot) 📱</h3>
-          <p style={{ fontSize:12, color:'var(--text-hint)', marginBottom:14, lineHeight:1.6 }}>
-            Para ativar notificações gratuitas via WhatsApp, cada criança precisa:<br/>
-            1. Adicionar o número <strong>+34 644 61 79 98</strong> nos contatos<br/>
-            2. Enviar a mensagem: <em>"I allow callmebot to send me messages"</em><br/>
-            3. Receber um <strong>apikey</strong> de resposta<br/>
-            4. Preencher abaixo no formato: <code>5554999990000:APIKEY</code>
-          </p>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:18 }}>
-            <div>
-              <label style={labelStyle}>Telefone criança 1 (phone:apikey)</label>
-              <input
-                style={{ ...inputStyle, borderColor: configDirty ? 'var(--child1-strong)' : undefined }}
-                value={config.child1Phone ?? ''}
-                onChange={e => { setConfig(c => ({ ...c, child1Phone:e.target.value })); setConfigDirty(true) }}
-                placeholder="5554999990000:123456"
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Telefone criança 2 (phone:apikey)</label>
-              <input
-                style={{ ...inputStyle, borderColor: configDirty ? 'var(--child2-strong)' : undefined }}
-                value={config.child2Phone ?? ''}
-                onChange={e => { setConfig(c => ({ ...c, child2Phone:e.target.value })); setConfigDirty(true) }}
-                placeholder="5554999990000:123456"
-              />
-            </div>
-          </div>
-
           <button onClick={saveConfig} disabled={saving || !configDirty} style={{
             padding:'9px 22px', borderRadius:'var(--radius-md)',
             background: configDirty ? 'var(--text-primary)' : 'var(--surface-2)',
