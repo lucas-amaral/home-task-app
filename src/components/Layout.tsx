@@ -223,9 +223,8 @@ export function Legend() {
  ]
   const consequences = [
     { emoji:'⭐', label:'Feito sem lembrete', value:'+1 bônus' },
-    { emoji:'❌', label:'Tarefa perdeu o prazo', value:'−1 ponto' },
-    { emoji:'🧦', label:'Item pessoal na sala', value:'−1 ponto' },
-    { emoji:'📅', label:'Semana inteira sem tarefas', value:'−5 pontos' },
+    { emoji:'🚀', label:'Tarefa de casa feita proativamente', value:'+1 ponto' },
+    { emoji:'✨', label:'Comportamento alinhado com nossos valores', value:'+1 ponto' },
   ]
   return (
     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:18 }}>
