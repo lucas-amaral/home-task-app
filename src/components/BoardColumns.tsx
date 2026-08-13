@@ -35,7 +35,8 @@ export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onD
   )
 
   function tasksForCol(col: ColId): Assignment[] {
-    return board.assignments.filter(a => a.assignedTo === col)
+    // defensive: board.assignments may be undefined when data is still loading
+    return (board.assignments ?? []).filter(a => a.assignedTo === col)
   }
 
   function handleDragStart(e: DragStartEvent) { setActiveId(e.active.id as number) }
@@ -44,7 +45,8 @@ export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onD
     const { over } = e
     if (over && activeId !== null) {
       const target = over.id as Assignee
-      const a = board.assignments.find(a => a.id === activeId)
+      // defensive: board.assignments may be undefined while loading
+      const a = (board.assignments ?? []).find(a => a.id === activeId)
       if (a && !a.completed && a.assignedTo !== target) {
         onAssign(a.id, a.taskId, target, a.periodDate, a.taskFrequency === 'DAILY')
       }
@@ -52,7 +54,8 @@ export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onD
     setActiveId(null)
   }
 
-  const activeAssignment = activeId ? board.assignments.find(a => a.id === activeId) : null
+  // defensive: guard against board.assignments being undefined
+  const activeAssignment = activeId ? (board.assignments ?? []).find(a => a.id === activeId) : null
 
   const colLabel = (col: ColId) => {
     if (col === 'CHILD1')     return board.child1Name
