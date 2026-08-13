@@ -16,21 +16,23 @@ const labelStyle: React.CSSProperties = {
 
 // ── Option lists ──────────────────────────────────────────────────────────────
 
-const TYPE_OPTIONS    = [{ value:'DAILY', label:'Diária' }, { value:'WEEKLY', label:'Semanal' }, { value:'JOINT', label:'Conjunta' }, { value:'RULE', label:'Regra' }]
-const FREQ_OPTIONS    = [{ value:'DAILY', label:'Diária' }, { value:'WEEKLY', label:'Semanal' }, { value:'BIWEEKLY', label:'Quinzenal' }, { value:'MONTHLY', label:'Mensal' }]
-const ASSIGNEE_OPTIONS= [{ value:'UNASSIGNED', label:'Não atribuída' }, { value:'CHILD1', label:'Filho 1' }, { value:'CHILD2', label:'Filho 2' }, { value:'BOTH', label:'Ambos' }]
+const TYPE_OPTIONS    = [{ value:'DAILY', label:'Diária' }, { value:'WEEKLY', label:'Semanal' }, { value:'JOINT', label:'Em dupla' }, { value:'RULE', label:'Regra' }]
+const FREQ_OPTIONS    = [{ value:'DAILY', label:'Diária' }, { value:'EVERY_2_DAYS', label:'A cada 2 dias' }, { value:'WEEKLY', label:'Semanal' }, { value:'BIWEEKLY', label:'Quinzenal' }, { value:'MONTHLY', label:'Mensal' }]
+const ASSIGNEE_OPTIONS= [{ value:'UNASSIGNED', label:'Não atribuída' }, { value:'CHILD1', label:'Filho 1' }, { value:'CHILD2', label:'Filho 2' }, { value:'BOTH', label:'Ambos (sempre em dupla)' }]
 
-const TYPE_LABEL: Record<TaskType, string>     = { DAILY:'diária', WEEKLY:'semanal', JOINT:'conjunta', RULE:'regra' }
-const FREQ_LABEL: Record<TaskFrequency, string> = { DAILY:'diária', WEEKLY:'semanal', BIWEEKLY:'quinzenal', MONTHLY:'mensal' }
+const TYPE_LABEL: Record<TaskType, string>     = { DAILY:'diária', WEEKLY:'semanal', JOINT:'em dupla', RULE:'regra' }
+const FREQ_LABEL: Record<TaskFrequency, string> = { DAILY:'diária', EVERY_2_DAYS:'a cada 2 dias', WEEKLY:'semanal', BIWEEKLY:'quinzenal', MONTHLY:'mensal' }
 const ASSIGNEE_LABEL: Record<Assignee, string>  = { UNASSIGNED:'não atribuída', CHILD1:'filho 1', CHILD2:'filho 2', BOTH:'ambos' }
 const TYPE_COLOR: Record<TaskType, string>      = { DAILY:'var(--daily-border)', WEEKLY:'var(--weekly-border)', JOINT:'var(--joint-border)', RULE:'var(--rule-border)' }
 
 // ── Blank form ────────────────────────────────────────────────────────────────
-
+// Punitive model: tasks carry no positive points value anymore — completing
+// them on time is the expected baseline. `points` stays in the payload for
+// backend compatibility but is always sent as 0.
 const BLANK_FORM = {
   name:'', description:'', type:'DAILY' as TaskType,
   frequency:'DAILY' as TaskFrequency, defaultAssignee:'UNASSIGNED' as Assignee,
-  points:1, timeWindow:'', deadline:'', sortOrder:0, active:true,
+  points:0, timeWindow:'', deadline:'', sortOrder:0, active:true,
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -234,6 +236,10 @@ export function AdminPage() {
       {/* ── Rewards tab ── */}
       {tab === 'rewards' && (
         <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
+          <p style={{ fontSize:12, color:'var(--text-hint)', marginBottom:2 }}>
+            Recompensas são opcionais — não fazem parte do sistema automático de pontos/consequências,
+            que é puramente punitivo. Use-as manualmente para celebrar uma semana limpa.
+          </p>
           {rewards.map(r => (
             <div key={r.id} style={{
               background:'var(--surface)', border:'1px solid var(--border)',
@@ -242,10 +248,6 @@ export function AdminPage() {
             }}>
               <span style={{ fontSize:22 }}>{r.emoji}</span>
               <span style={{ fontSize:13, fontWeight:500, flex:1 }}>{r.name}</span>
-              <span style={{
-                background:'var(--daily-bg)', border:'1px solid var(--daily-border)',
-                borderRadius:10, padding:'3px 10px', fontSize:13, fontWeight:500, color:'var(--daily-text)',
-              }}>{r.pointsCost} pontos</span>
             </div>
           ))}
           <p style={{ fontSize:12, color:'var(--text-hint)', textAlign:'center', marginTop:8 }}>
@@ -337,10 +339,14 @@ function TaskForm({ mode, form, setForm, saving, onSave, onCancel }: TaskFormPro
           />
         </div>
         <div style={{ gridColumn:'1/-1' }}>
-          <label style={labelStyle}>Descrição</label>
-          <input style={inputStyle} value={form.description}
+          <label style={labelStyle}>Descrição / passos</label>
+          <textarea style={{ ...inputStyle, minHeight:74, resize:'vertical', fontFamily:'var(--font-body)' }}
+            value={form.description}
             onChange={e => setForm(f => ({ ...f, description:e.target.value }))}
-            placeholder="Detalhes opcionais" />
+            placeholder={'Uma linha por passo, começando com "- ", ex.:\n- Passar aspirador em todas as áreas\n- Esvaziar o filtro se necessário'} />
+          <p style={{ fontSize:11, color:'var(--text-hint)', marginTop:3 }}>
+            Linhas que começam com "- " viram um checklist que precisa ser todo marcado antes de concluir a tarefa.
+          </p>
         </div>
         <div>
           <label style={labelStyle}>Tipo</label>
@@ -362,11 +368,6 @@ function TaskForm({ mode, form, setForm, saving, onSave, onCancel }: TaskFormPro
             onChange={e => setForm(f => ({ ...f, defaultAssignee:e.target.value as Assignee }))}>
             {ASSIGNEE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-        </div>
-        <div>
-          <label style={labelStyle}>Pontos</label>
-          <input style={inputStyle} type="number" min={1} max={10} value={form.points}
-            onChange={e => setForm(f => ({ ...f, points:Number(e.target.value) }))} />
         </div>
         <div>
           <label style={labelStyle}>Prazo (HH:mm)</label>
@@ -446,7 +447,7 @@ function TaskRow({ task: t, isEditing, confirmingDelete, onEdit, onDeleteRequest
             <p style={{ fontSize:11, color:'var(--text-secondary)', marginTop:1 }}>{t.description}</p>
           )}
           <p style={{ fontSize:11, color:'var(--text-hint)', marginTop:2 }}>
-            {TYPE_LABEL[t.type]} · {FREQ_LABEL[t.frequency]} · {t.points} ponto{t.points !== 1 ? 's' : ''}
+            {TYPE_LABEL[t.type]} · {FREQ_LABEL[t.frequency]}{t.deadline ? ` · até ${t.deadline}` : ''}
             {t.deadline ? ` · prazo: ${t.deadline}` : ''}
             {t.defaultAssignee !== 'UNASSIGNED' ? ` · padrão: ${ASSIGNEE_LABEL[t.defaultAssignee]}` : ''}
           </p>

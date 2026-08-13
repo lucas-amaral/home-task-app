@@ -10,6 +10,8 @@ vi.mock('../api/client', () => ({
     complete: vi.fn(),
     uncomplete: vi.fn(),
     penalty: vi.fn(),
+    deleteAssignment: vi.fn(),
+    createTask: vi.fn(),
   },
 }))
 
@@ -24,17 +26,18 @@ const mockBoard = {
       taskType: 'DAILY', taskFrequency: 'DAILY',
       assignedTo: 'CHILD1', periodDate: '2024-01-15',
       completed: false, completedAt: null,
-      bonusEarned: false, penaltyApplied: false, points: 1,
+      bonusEarned: false, penaltyApplied: false, points: 0,
     },
     {
       id: 2, taskId: 20, taskName: 'Clean bathroom',
       taskType: 'JOINT', taskFrequency: 'DAILY',
       assignedTo: 'BOTH', periodDate: '2024-01-15',
       completed: false, completedAt: null,
-      bonusEarned: false, penaltyApplied: false, points: 1,
+      bonusEarned: false, penaltyApplied: false, points: 0,
     },
   ],
-  weekPoints: { CHILD1: 3, CHILD2: 1 },
+  weekPoints: { CHILD1: 0, CHILD2: 0 },
+  weeklyStatus: [],
 }
 
 describe('useBoard', () => {
@@ -57,41 +60,36 @@ describe('useBoard', () => {
     expect(result.current.error).toBeTruthy()
   })
 
-  it('toggleComplete adds points optimistically for CHILD1', async () => {
+  it('toggleComplete marks the task done and re-fetches the board (no points awarded)', async () => {
     const completed = { ...mockBoard.assignments[0], completed: true, completedAt: '2024-01-15T10:00:00' }
     vi.mocked(boardApi.complete).mockResolvedValue(completed as any)
+    const refreshed = { ...mockBoard, assignments: [completed, mockBoard.assignments[1]] }
+    vi.mocked(boardApi.getBoard).mockResolvedValueOnce(mockBoard as any).mockResolvedValue(refreshed as any)
 
     const { result } = renderHook(() => useBoard())
     await waitFor(() => expect(result.current.board).not.toBeNull())
 
     await act(async () => { await result.current.toggleComplete(1) })
 
-    expect(result.current.board?.weekPoints['CHILD1']).toBe(4)
+    expect(boardApi.complete).toHaveBeenCalledWith(1)
+    // No positive-points argument is ever sent, and the board is re-fetched
+    // so weekPoints/weeklyStatus reflect the server's punitive calculation.
+    await waitFor(() => expect(result.current.board?.assignments[0].completed).toBe(true))
+    expect(boardApi.getBoard).toHaveBeenCalledTimes(2)
   })
 
-  it('toggleComplete awards points to BOTH children for joint task', async () => {
-    const completed = { ...mockBoard.assignments[1], completed: true, completedAt: '2024-01-15T10:00:00' }
-    vi.mocked(boardApi.complete).mockResolvedValue(completed as any)
-
-    const { result } = renderHook(() => useBoard())
-    await waitFor(() => expect(result.current.board).not.toBeNull())
-
-    await act(async () => { await result.current.toggleComplete(2) })
-
-    expect(result.current.board?.weekPoints['CHILD1']).toBe(4)
-    expect(result.current.board?.weekPoints['CHILD2']).toBe(2)
-  })
-
-  it('applyPenalty deducts 1 from correct child', async () => {
+  it('applyPenalty records a −1 occurrence and re-fetches the board', async () => {
     const penalised = { ...mockBoard.assignments[0], penaltyApplied: true }
     vi.mocked(boardApi.penalty).mockResolvedValue(penalised as any)
+    const refreshed = { ...mockBoard, weekPoints: { CHILD1: -1, CHILD2: 0 } }
+    vi.mocked(boardApi.getBoard).mockResolvedValueOnce(mockBoard as any).mockResolvedValue(refreshed as any)
 
     const { result } = renderHook(() => useBoard())
     await waitFor(() => expect(result.current.board).not.toBeNull())
 
     await act(async () => { await result.current.applyPenalty(1) })
 
-    expect(result.current.board?.weekPoints['CHILD1']).toBe(2)
+    await waitFor(() => expect(result.current.board?.weekPoints['CHILD1']).toBe(-1))
   })
 
   it('weekLabel is derived from backend weekStart, not client date', async () => {

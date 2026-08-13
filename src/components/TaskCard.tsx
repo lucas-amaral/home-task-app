@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { format, addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import type { Assignment, Assignee, TaskType } from '../types'
@@ -8,7 +8,7 @@ interface Props {
   child1Name: string
   child2Name: string
   onAssign: (assignedTo: Assignee) => void
-  onToggleComplete: (bonusEarned?: boolean) => void
+  onToggleComplete: () => void
   onPenalty: () => void
   onDelete: () => void
   dragging?: boolean
@@ -17,22 +17,35 @@ interface Props {
 const TYPE: Record<TaskType, { bg: string; border: string; text: string; label: string }> = {
   DAILY:  { bg:'var(--daily-bg)',  border:'var(--daily-border)',  text:'var(--daily-text)',  label:'diária' },
   WEEKLY: { bg:'var(--weekly-bg)', border:'var(--weekly-border)', text:'var(--weekly-text)', label:'semanal' },
-  JOINT:  { bg:'var(--joint-bg)',  border:'var(--joint-border)',  text:'var(--joint-text)',  label:'compartilhada' },
+  JOINT:  { bg:'var(--joint-bg)',  border:'var(--joint-border)',  text:'var(--joint-text)',  label:'em dupla' },
   RULE:   { bg:'var(--rule-bg)',   border:'var(--rule-border)',   text:'var(--rule-text)',   label:'regra' },
+}
+
+/** Parses "- item" lines out of the task description into checklist steps. */
+function parseChecklist(description?: string): string[] {
+  if (!description) return []
+  return description
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l.startsWith('- '))
+    .map(l => l.slice(2).trim())
 }
 
 export function TaskCard({
   assignment, child1Name, child2Name,
   onAssign, onToggleComplete, onPenalty, onDelete, dragging
 }: Props) {
-  const [bonusPrompt, setBonusPrompt] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [showTooltip, setShowTooltip] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [checklistOpen, setChecklistOpen] = useState(false)
+  const [checked, setChecked] = useState<Record<number, boolean>>({})
 
   const s = TYPE[assignment.taskType]
   const isJoint = assignment.assignedTo === 'BOTH'
   const isCompleted = assignment.completed
+  const steps = useMemo(() => parseChecklist(assignment.taskDescription), [assignment.taskDescription])
+  const hasSteps = steps.length > 0
+  const allChecked = !hasSteps || steps.every((_, i) => checked[i])
 
   const completedDateLabel = isCompleted && assignment.completedAt
     ? format(new Date(assignment.completedAt), "dd/MM HH:mm", { locale: ptBR })
@@ -45,20 +58,21 @@ export function TaskCard({
 
   function handleDoneClick() {
     if (isCompleted) { onToggleComplete(); return }
-    setBonusPrompt(true)
+    if (hasSteps && !checklistOpen) { setChecklistOpen(true); return }
+    if (!allChecked) return
+    onToggleComplete()
+    setChecklistOpen(false)
+    setChecked({})
   }
 
-  function confirmBonus(bonus: boolean) {
-    onToggleComplete(bonus)
-    setBonusPrompt(false)
+  function toggleStep(i: number) {
+    setChecked(prev => ({ ...prev, [i]: !prev[i] }))
   }
 
   function handleDeleteClick() {
     if (!confirmDelete) {
-      // First click: show confirmation state
       setConfirmDelete(true)
       setMenuOpen(false)
-      // Auto-reset confirmation after 3 s if not confirmed
       setTimeout(() => setConfirmDelete(false), 3000)
       return
     }
@@ -71,7 +85,7 @@ export function TaskCard({
       data-testid="task-card"
       style={{
         background: s.bg,
-        border: `1.5px solid ${confirmDelete ? '#A32D2D' : s.border}`,
+        border: `1.5px solid ${confirmDelete ? '#A32D2D' : assignment.penaltyApplied ? '#A32D2D' : s.border}`,
         borderRadius: 'var(--radius-md)',
         padding: '11px 13px',
         marginBottom: 9,
@@ -87,28 +101,13 @@ export function TaskCard({
           el.style.transform = 'rotate(-0.6deg) translateY(-2px)'
           el.style.boxShadow = 'var(--shadow-md)'
         }
-        if (assignment.taskDescription) setShowTooltip(true)
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLDivElement
         el.style.transform = ''
         el.style.boxShadow = ''
-        setShowTooltip(false)
       }}
     >
-      {/* Tooltip */}
-      {showTooltip && assignment.taskDescription && (
-        <div style={{
-          position:'absolute', bottom:'100%', left:0, right:0,
-          background: s.border, color: s.bg,
-          padding:'8px 10px', borderRadius:'var(--radius-sm)',
-          fontSize:12, marginBottom:6, zIndex:50,
-          boxShadow:'var(--shadow-md)', pointerEvents:'none', lineHeight:1.4,
-        }}>
-          {assignment.taskDescription}
-        </div>
-      )}
-
       {/* Confirm-delete banner */}
       {confirmDelete && (
         <div style={{
@@ -147,12 +146,20 @@ export function TaskCard({
           }}>
             {assignment.taskName}
           </p>
+          {hasSteps && !isCompleted && (
+            <button
+              onClick={() => setChecklistOpen(v => !v)}
+              style={{ fontSize:10.5, color:s.text, opacity:0.65, marginTop:2, textDecoration:'underline' }}
+            >
+              {checklistOpen ? 'ocultar passos' : `ver ${steps.length} passos`}
+            </button>
+          )}
         </div>
         <span style={{
           fontSize:10, fontWeight:500, padding:'2px 7px', borderRadius:20,
           background:s.border, color:s.bg, whiteSpace:'nowrap', flexShrink:0,
         }}>
-          {s.label} +{assignment.points}
+          {s.label}
         </span>
       </div>
 
@@ -163,24 +170,50 @@ export function TaskCard({
         </span>
       </div>
 
-      {/* Bonus prompt */}
-      {bonusPrompt && (
+      {/* Checklist */}
+      {checklistOpen && !isCompleted && hasSteps && (
         <div style={{
           background:'rgba(255,255,255,0.75)', borderRadius:'var(--radius-sm)',
-          padding:'8px 10px', marginBottom:8,
+          padding:'9px 10px', marginBottom:8,
         }}>
-          <p style={{ fontSize:12, color:s.text, fontWeight:500, marginBottom:6 }}>
-            Feito sem ser lembrado?
+          <p style={{ fontSize:11.5, color:s.text, fontWeight:500, marginBottom:7 }}>
+            Confira todos os passos:
           </p>
-          <div style={{ display:'flex', gap:6 }}>
-            <button onClick={() => confirmBonus(true)} style={{
-              flex:1, padding:'4px 0', borderRadius:'var(--radius-sm)',
-              background:s.border, color:s.bg, fontSize:12, fontWeight:500,
-            }}>Sim +1 bônus</button>
-            <button onClick={() => confirmBonus(false)} style={{
-              flex:1, padding:'4px 0', borderRadius:'var(--radius-sm)',
-              border:`1px solid ${s.border}`, color:s.text, fontSize:12,
-            }}>Não</button>
+          {steps.map((step, i) => (
+            <label key={i} style={{
+              display:'flex', alignItems:'flex-start', gap:7, marginBottom:6,
+              fontSize:12, color:s.text, cursor:'pointer', lineHeight:1.35,
+            }}>
+              <input
+                type="checkbox"
+                checked={!!checked[i]}
+                onChange={() => toggleStep(i)}
+                style={{ marginTop:2, flexShrink:0, accentColor:s.border }}
+              />
+              <span style={{ textDecoration: checked[i] ? 'line-through' : 'none', opacity: checked[i] ? 0.6 : 1 }}>
+                {step}
+              </span>
+            </label>
+          ))}
+          <div style={{ display:'flex', gap:6, marginTop:6 }}>
+            <button
+              onClick={handleDoneClick}
+              disabled={!allChecked}
+              style={{
+                flex:1, padding:'6px 0', borderRadius:'var(--radius-sm)',
+                background: allChecked ? s.border : 'var(--surface-2)',
+                color: allChecked ? s.bg : 'var(--text-hint)',
+                fontSize:12, fontWeight:500,
+                cursor: allChecked ? 'pointer' : 'not-allowed',
+              }}
+            >Confirmar concluído</button>
+            <button
+              onClick={() => { setChecklistOpen(false); setChecked({}) }}
+              style={{
+                padding:'6px 10px', borderRadius:'var(--radius-sm)',
+                border:`1px solid ${s.border}`, color:s.text, fontSize:12, background:'transparent',
+              }}
+            >Cancelar</button>
           </div>
         </div>
       )}
@@ -226,9 +259,9 @@ export function TaskCard({
                 position:'absolute', right:0, bottom:'110%',
                 background:'var(--surface)', border:'1px solid var(--border-strong)',
                 borderRadius:'var(--radius-sm)', boxShadow:'var(--shadow-md)',
-                minWidth:180, zIndex:20,
+                minWidth:210, zIndex:20,
               }}>
-                {!isCompleted && (
+                {!isCompleted && !assignment.penaltyApplied && (
                   <button
                     onClick={() => { onPenalty(); setMenuOpen(false) }}
                     style={{
@@ -236,7 +269,7 @@ export function TaskCard({
                       padding:'8px 12px', fontSize:12, color:'#A32D2D',
                       borderBottom:'1px solid var(--border)',
                     }}
-                  >Aplicar penalidade −1 pt</button>
+                  >Registrar ocorrência (−1: não feita/incompleta)</button>
                 )}
                 <button
                   onClick={() => { setMenuOpen(false); handleDeleteClick() }}
@@ -275,7 +308,7 @@ export function TaskCard({
           position:'absolute', top:7, right:7,
           fontSize:10, background:'#FCEBEB', color:'#A32D2D',
           padding:'1px 6px', borderRadius:10,
-        }}>atrasado</span>
+        }}>ocorrência</span>
       )}
     </div>
   )

@@ -187,6 +187,7 @@ export function RewardsPanel({ child1Points, child2Points, rewards }: { child1Po
 }
 
 function PersonScore({ name, points, color }: { name: string; points: number; color: 'child1'|'child2' }) {
+  const isClean = points === 0
   return (
     <div style={{
       background:'var(--surface)', border:'1px solid var(--border)',
@@ -205,9 +206,11 @@ function PersonScore({ name, points, color }: { name: string; points: number; co
       <p style={{ fontSize:13, color:'var(--text-secondary)', marginBottom:3 }}>{name}</p>
       <p style={{
         fontSize:38, fontWeight:600, fontFamily:'var(--font-display)',
-        color:`var(--${color}-strong)`, lineHeight:1, animation:'pop .3s ease',
+        color: isClean ? `var(--${color}-strong)` : '#A32D2D', lineHeight:1, animation:'pop .3s ease',
       }}>{points}</p>
-      <p style={{ fontSize:11, color:'var(--text-hint)', marginTop:2 }}>Pontos essa semana</p>
+      <p style={{ fontSize:11, color:'var(--text-hint)', marginTop:2 }}>
+        {isClean ? 'Semana limpa 🎉' : 'pontos essa semana'}
+      </p>
     </div>
   )
 }
@@ -216,37 +219,26 @@ function PersonScore({ name, points, color }: { name: string; points: number; co
 
 export function Legend() {
  const types = [
-    { color:'var(--daily-border)', label:'Diária (+1 ponto)' },
-    { color:'var(--weekly-border)', label:'Semanal (+3 pontos)' },
-    { color:'var(--joint-border)', label:'Conjunta (juntos)' },
+    { color:'var(--daily-border)', label:'Diária' },
+    { color:'var(--weekly-border)', label:'Semanal' },
+    { color:'var(--joint-border)', label:'Em dupla (sempre juntos)' },
     { color:'var(--rule-border)', label:'Regra da casa' },
  ]
-  const consequences = [
-    { emoji:'⭐', label:'Feito sem lembrete', value:'+1 bônus' },
-    { emoji:'🚀', label:'Tarefa de casa feita proativamente', value:'+1 ponto' },
-    { emoji:'✨', label:'Comportamento alinhado com nossos valores', value:'+1 ponto' },
-  ]
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:18 }}>
-      <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'13px 15px' }}>
-        <p style={{ fontSize:11, fontWeight:500, color:'var(--text-secondary)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:9 }}>Tipos de tarefas</p>
+    <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'13px 15px', marginBottom:18 }}>
+      <p style={{ fontSize:11, fontWeight:500, color:'var(--text-secondary)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:9 }}>Tipos de tarefas</p>
+      <div style={{ display:'flex', flexWrap:'wrap', gap:'6px 18px' }}>
         {types.map(t => (
-          <div key={t.label} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+          <div key={t.label} style={{ display:'flex', alignItems:'center', gap:8 }}>
             <div style={{ width:9, height:9, borderRadius:'50%', background:t.color }} />
             <span style={{ fontSize:13 }}>{t.label}</span>
           </div>
         ))}
       </div>
-      <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'13px 15px' }}>
-        <p style={{ fontSize:11, fontWeight:500, color:'var(--text-secondary)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:9 }}>Bonus & consequências</p>
-        {consequences.map(c => (
-          <div key={c.label} style={{ display:'flex', alignItems:'center', gap:7, marginBottom:6 }}>
-            <span style={{ fontSize:13, width:17, textAlign:'center', flexShrink:0 }}>{c.emoji}</span>
-            <span style={{ fontSize:12, color:'var(--text-secondary)', flex:1 }}>{c.label}</span>
-            <span style={{ fontSize:12, fontWeight:500, color: c.value.startsWith('+') ? 'var(--weekly-text)' : '#A32D2D' }}>{c.value}</span>
-          </div>
-        ))}
-      </div>
+      <p style={{ fontSize:11.5, color:'var(--text-hint)', marginTop:10, lineHeight:1.5 }}>
+        Cada tarefa não feita, feita fora do prazo ou incompleta gera −1 ponto (uma ocorrência) para quem era responsável.
+        Fazer a tarefa certinho e no prazo é o esperado — não gera pontos extra.
+      </p>
     </div>
   )
 }

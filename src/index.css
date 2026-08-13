@@ -59,3 +59,16 @@ button { font-family: var(--font-body); cursor: pointer; border: none; backgroun
 @keyframes fadeIn  { from { opacity:0; transform:translateY(5px) }  to { opacity:1; transform:translateY(0) } }
 @keyframes slideIn { from { opacity:0; transform:translateX(-8px) } to { opacity:1; transform:translateX(0) } }
 @keyframes pop     { 0%{transform:scale(1)} 50%{transform:scale(1.18)} 100%{transform:scale(1)} }
+
+/* ── Responsive board grid ──────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .board-columns-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 520px) {
+  .board-columns-grid { grid-template-columns: 1fr !important; }
+}
+
+/* Prevent iOS Safari from zooming in on inputs focused inside the PWA */
+@media (max-width: 520px) {
+  input, select, textarea { font-size: 16px !important; }
+}

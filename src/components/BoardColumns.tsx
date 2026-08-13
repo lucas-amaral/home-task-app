@@ -11,10 +11,10 @@ import type { Assignment, Assignee, BoardDto } from '../types'
 interface Props {
   board: BoardDto
   onAssign: (assignmentId: number, taskId: number, to: Assignee, periodDate: string, isDaily: boolean) => void
-  onToggleComplete: (id: number, bonus?: boolean) => void
+  onToggleComplete: (id: number) => void
   onPenalty: (id: number) => void
   onDelete: (id: number) => void
-  onAddOneOff: (assignedTo: Assignee, name: string, points: number) => Promise<void>
+  onAddOneOff: (assignedTo: Assignee, name: string) => Promise<void>
 }
 
 type ColId = 'CHILD1' | 'UNASSIGNED' | 'CHILD2' | 'BOTH'
@@ -71,7 +71,7 @@ export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onD
     <>
       <DndContext sensors={sensors} collisionDetection={closestCenter}
                   onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:12 }}>
+        <div className="board-columns-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:12 }}>
           {COLUMNS.map(col => {
             const tasks = tasksForCol(col.id)
             const accent = colAccent(col.id)
@@ -91,7 +91,7 @@ export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onD
                       child1Name={board.child1Name}
                       child2Name={board.child2Name}
                       onAssign={to => onAssign(a.id, a.taskId, to, a.periodDate, a.taskFrequency === 'DAILY')}
-                      onToggleComplete={bonus => onToggleComplete(a.id, bonus)}
+                      onToggleComplete={() => onToggleComplete(a.id)}
                       onPenalty={() => onPenalty(a.id)}
                       onDelete={() => onDelete(a.id)}
                       dragging={activeId === a.id}
@@ -131,7 +131,7 @@ export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onD
         <OneOffModal
           colLabel={colLabel(addingTo)}
           accent={colAccent(addingTo)}
-          onConfirm={async (name, points) => { await onAddOneOff(addingTo, name, points); setAddingTo(null) }}
+          onConfirm={async (name) => { await onAddOneOff(addingTo, name); setAddingTo(null) }}
           onClose={() => setAddingTo(null)}
         />
       )}
@@ -143,17 +143,16 @@ export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onD
 
 function OneOffModal({ colLabel, accent, onConfirm, onClose }: {
   colLabel: string; accent: string
-  onConfirm: (name: string, points: number) => Promise<void>
+  onConfirm: (name: string) => Promise<void>
   onClose: () => void
 }) {
   const [name, setName] = useState('')
-  const [points, setPoints] = useState(1)
   const [saving, setSaving] = useState(false)
 
   async function handleSubmit() {
     if (!name.trim()) return
     setSaving(true)
-    try { await onConfirm(name.trim(), points) } finally { setSaving(false) }
+    try { await onConfirm(name.trim()) } finally { setSaving(false) }
   }
 
   return (
@@ -190,25 +189,9 @@ function OneOffModal({ colLabel, accent, onConfirm, onClose }: {
             width:'100%', padding:'9px 11px', borderRadius:'var(--radius-sm)',
             border:'1.5px solid var(--border-strong)', fontSize:13,
             fontFamily:'var(--font-body)', outline:'none', boxSizing:'border-box',
-            marginBottom:14, color:'var(--text-primary)', background:'var(--bg)',
+            marginBottom:20, color:'var(--text-primary)', background:'var(--bg)',
           }}
         />
-
-        <label style={{ display:'block', fontSize:12, color:'var(--text-secondary)', marginBottom:5 }}>
-          Pontos
-        </label>
-        <div style={{ display:'flex', gap:6, marginBottom:20 }}>
-          {[1, 2, 3, 5].map(p => (
-            <button key={p} onClick={() => setPoints(p)} style={{
-              flex:1, padding:'7px 0', borderRadius:'var(--radius-sm)',
-              border: points === p ? `2px solid ${accent}` : '1.5px solid var(--border)',
-              background: points === p ? `color-mix(in srgb, ${accent} 12%, white)` : 'var(--bg)',
-              fontSize:13, fontWeight: points === p ? 600 : 400,
-              color: points === p ? accent : 'var(--text-secondary)',
-              transition:'all .1s',
-            }}>+{p}</button>
-          ))}
-        </div>
 
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={onClose} style={{

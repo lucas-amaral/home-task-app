@@ -1,107 +1,65 @@
-# Deployment Guide — Home Tasks
+# Deployment Guide — home-task-app (Frontend)
 
-## Prerequisites
-- A GitHub account
-- A [Railway](https://railway.app) account
-- A [Vercel](https://vercel.com) account
+The frontend stays on **Vercel** (already free, permanently — this wasn't
+what broke). The backend moved from Railway to Render; see
+`home-task-service/DEPLOY.md` for that side.
 
-## 1. Push the Project to GitHub
+## 1. Deploy to Vercel
 
-```bash
-cd home-task
-git init
-git add .
-git commit -m "feat: initial home tasks app"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/home-task-service.git
-git push -u origin main
-```
-
-## 2. Deploy the Backend to Railway
-
-1. Open [railway.app](https://railway.app) and create a new project.
-2. Choose `Deploy from GitHub repo` and select `home-task-service`.
-3. Click `Add Service -> Database -> PostgreSQL`.
-4. In the application service settings, set `Root Directory` to `backend`.
-5. In `Variables`, add:
-
-```text
-DATABASE_URL=${{Postgres.DATABASE_URL}}
-DATABASE_USERNAME=${{Postgres.PGUSER}}
-DATABASE_PASSWORD=${{Postgres.PGPASSWORD}}
-FRONTEND_URL=https://your-app.vercel.app
-```
-
-The production profile also supports Railway's native `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, and `PGPASSWORD` variables, so mapping the PostgreSQL service is usually enough even without extra datasource variables.
-
-6. Railway will build and deploy the backend automatically.
-7. In `Settings -> Domains`, copy the generated URL, for example `https://home-task-service.up.railway.app`.
-
-## 3. Deploy the Frontend to Vercel
-
-1. Open [vercel.com](https://vercel.com) and create a new project.
-2. Import the `home-task` repository.
-3. Configure the project with:
-   `Root Directory`: `frontend`
+1. Open [vercel.com](https://vercel.com) and import this repository.
+2. Framework preset: `Vite`.
    `Build Command`: `npm run build`
    `Output Directory`: `dist`
-4. Add this environment variable:
+3. Add this environment variable:
 
 ```text
-VITE_API_URL=https://home-task-service.up.railway.app
+VITE_API_URL = https://home-task-service.onrender.com
 ```
 
-5. Click `Deploy`.
-6. Copy the generated URL, for example `https://home-task.vercel.app`.
+(use your actual Render URL from the backend deploy)
 
-## 4. Update CORS on Railway
+4. Click `Deploy`. Copy the generated URL, e.g. `https://home-task.vercel.app`.
+5. Go back to the backend's Render env vars and set `FRONTEND_URL` to this
+   Vercel URL, so CORS allows it.
 
-Go back to Railway and update:
+## 2. Install it on the kids' phones (PWA)
 
-```text
-FRONTEND_URL=https://home-task-app.vercel.app
-```
+The app is now a installable Progressive Web App — no app store needed.
 
-Railway will redeploy automatically.
+**Android (Chrome):**
+1. Open the Vercel URL in Chrome.
+2. Tap the ⋮ menu → `Add to Home screen` (or Chrome may prompt automatically).
+
+**iPhone (Safari — must be Safari, not Chrome, for this to work on iOS):**
+1. Open the Vercel URL in Safari.
+2. Tap the Share icon → `Add to Home Screen`.
+
+Either way it opens full-screen like a native app, with its own icon.
 
 ## Local Development
 
 ```bash
-# Terminal 1 - Backend
-cd backend
-./gradlew bootRun
-# API at http://localhost:8080
-# H2 console at http://localhost:8080/h2-console
-
-# Terminal 2 - Frontend
-cd frontend
 cp .env.example .env.local
 npm install
 npm run dev
-# App at http://localhost:5173
+# App at http://localhost:5173 (proxies /api to http://localhost:8080)
 ```
 
 ## Updating Later
 
-Any `git push` to the `main` branch triggers automatic redeploys on Railway and Vercel.
+Any `git push` to `main` triggers an automatic redeploy on Vercel.
 
-```bash
-git add .
-git commit -m "feat: new task"
-git push
-```
+## What changed in this pass
 
-## API Endpoints
-
-| Method | Route | Description |
-|--------|------|-------------|
-| GET  | `/api/health` | Health check |
-| GET  | `/api/board?weekStart=2024-01-15` | Weekly board |
-| GET  | `/api/tasks` | List tasks |
-| POST | `/api/tasks` | Create task |
-| POST | `/api/assignments/assign` | Assign task |
-| POST | `/api/assignments/{id}/complete` | Mark as completed |
-| POST | `/api/assignments/{id}/uncomplete` | Undo completion |
-| POST | `/api/assignments/{id}/penalty` | Apply penalty |
-| GET  | `/api/rewards` | List rewards |
-| GET  | `/api/points/history` | Points history |
+- Rule engine is now punitive: completing a task on time earns no points;
+  a −1 "occurrence" only happens for a missed deadline, or a manually
+  registered "not done / incomplete" penalty.
+- New weekly consequence ladder (1st–6th occurrence) shown on the board and
+  week view.
+- Task checklists (the "- passo" lines in each task's description) must all
+  be checked before a task can be marked complete.
+- The lunch table task is always `BOTH` (joint) — completing it marks it
+  done for both children at once, per the house rule that lunch cleanup is
+  always done together.
+- Added installable PWA support (manifest, icons, offline app shell — API
+  calls always go live, never cached).

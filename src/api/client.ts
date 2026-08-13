@@ -57,6 +57,9 @@ export const boardApi = {
   pointsHistory: (): Promise<PointLedgerDto[]> =>
     api.get('/points/history').then(r => r.data),
 
+  getWeeklyStatus: (weekStart?: string) =>
+    api.get('/points/status', { params: weekStart ? { weekStart } : {} }).then(r => r.data),
+
   getWeekSummary: (weekStart: string): Promise<WeekSummaryDto> =>
     api.get(`/weeks/${weekStart}`).then(r => r.data),
 

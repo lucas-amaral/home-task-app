@@ -8,6 +8,14 @@ function todayStr() {
   return format(new Date(), 'yyyy-MM-dd')
 }
 
+/**
+ * Punitive model: completing a task on time earns no points, so we no longer
+ * try to hand-maintain optimistic point/occurrence math on the client (that
+ * used to track +points/-points locally). Instead we optimistically patch the
+ * touched assignment for a snappy UI, then re-fetch the board in the
+ * background so weekPoints and weeklyStatus (occurrence counts + the
+ * consequence ladder) always reflect the server's calculation exactly.
+ */
 export function useBoard() {
   const [board, setBoard] = useState<BoardDto | null>(null)
   const [loading, setLoading] = useState(true)
@@ -29,6 +37,13 @@ export function useBoard() {
 
   useEffect(() => { fetchBoard() }, [fetchBoard])
 
+  const patchAssignment = useCallback((updated: any) => {
+    setBoard(prev => prev ? {
+      ...prev,
+      assignments: prev.assignments.map(a => a.id === updated.id ? updated : a),
+    } : prev)
+  }, [])
+
   const assign = useCallback(async (
     assignmentId: number,
     taskId: number,
@@ -42,101 +57,56 @@ export function useBoard() {
         isDaily ? periodDate : undefined,
         isDaily ? undefined : periodDate
       )
-      setBoard(prev => prev ? {
-        ...prev,
-        assignments: prev.assignments.map(a => a.id === assignmentId ? updated : a)
-      } : prev)
+      patchAssignment(updated)
+      fetchBoard()
     } catch (e) { console.error('assign error', e) }
-  }, [])
+  }, [patchAssignment, fetchBoard])
 
-  const toggleComplete = useCallback(async (id: number, bonusEarned = false) => {
+  const toggleComplete = useCallback(async (id: number) => {
     if (!board) return
     const existing = board.assignments.find(a => a.id === id)
     if (!existing) return
     try {
       const updated = existing.completed
         ? await boardApi.uncomplete(id)
-        : await boardApi.complete(id, bonusEarned)
-
-      const pts = existing.points + (bonusEarned && !existing.completed ? 1 : 0)
-      const sign = existing.completed ? -1 : 1
-      const targets = existing.assignedTo === 'BOTH'
-        ? ['CHILD1', 'CHILD2']
-        : existing.assignedTo === 'UNASSIGNED' ? [] : [existing.assignedTo]
-
-      setBoard(prev => {
-        if (!prev) return prev
-        const newPts = { ...prev.weekPoints }
-        targets.forEach(p => { newPts[p] = Math.max(0, (newPts[p] ?? 0) + sign * pts) })
-        return {
-          ...prev,
-          weekPoints: newPts,
-          assignments: prev.assignments.map(a => a.id === id ? updated : a),
-        }
-      })
+        : await boardApi.complete(id)
+      patchAssignment(updated)
+      fetchBoard()
     } catch (e) { console.error('toggleComplete error', e) }
-  }, [board])
+  }, [board, patchAssignment, fetchBoard])
 
   const applyPenalty = useCallback(async (id: number) => {
     if (!board) return
-    const existing = board.assignments.find(a => a.id === id)
-    if (!existing) return
     try {
       const updated = await boardApi.penalty(id)
-      const targets = existing.assignedTo === 'BOTH'
-        ? ['CHILD1', 'CHILD2']
-        : existing.assignedTo === 'UNASSIGNED' ? [] : [existing.assignedTo]
-      setBoard(prev => {
-        if (!prev) return prev
-        const newPts = { ...prev.weekPoints }
-        targets.forEach(p => { newPts[p] = Math.max(0, (newPts[p] ?? 0) - 1) })
-        return {
-          ...prev,
-          weekPoints: newPts,
-          assignments: prev.assignments.map(a => a.id === id ? updated : a),
-        }
-      })
+      patchAssignment(updated)
+      fetchBoard()
     } catch (e) { console.error('penalty error', e) }
-  }, [board])
+  }, [board, patchAssignment, fetchBoard])
 
   /**
    * Feature 1 — Delete an assignment from the board.
-   * Points are reversed server-side; we optimistically remove it from local state
-   * and refresh the week totals.
+   * A recorded penalty (occurrence) is reversed server-side; we optimistically
+   * remove it from local state and refresh the week totals.
    */
   const deleteAssignment = useCallback(async (id: number) => {
     if (!board) return
-    const existing = board.assignments.find(a => a.id === id)
-    if (!existing) return
     try {
       await boardApi.deleteAssignment(id)
-      // Reverse points optimistically if it was completed
-      const sign = -1
-      const pts = existing.completed
-        ? existing.points + (existing.bonusEarned ? 1 : 0)
-        : 0
-      const targets = existing.assignedTo === 'BOTH'
-        ? ['CHILD1', 'CHILD2']
-        : existing.assignedTo === 'UNASSIGNED' ? [] : [existing.assignedTo]
-
-      setBoard(prev => {
-        if (!prev) return prev
-        const newPts = { ...prev.weekPoints }
-        if (pts > 0) targets.forEach(p => { newPts[p] = Math.max(0, (newPts[p] ?? 0) + sign * pts) })
-        return {
-          ...prev,
-          weekPoints: newPts,
-          assignments: prev.assignments.filter(a => a.id !== id),
-        }
-      })
+      setBoard(prev => prev ? {
+        ...prev,
+        assignments: prev.assignments.filter(a => a.id !== id),
+      } : prev)
+      fetchBoard()
     } catch (e) { console.error('deleteAssignment error', e) }
-  }, [board])
+  }, [board, fetchBoard])
 
   /**
    * Feature 2 — Create a one-off task for today only.
    * The task is flagged oneOff=true so BoardService never recreates it.
+   * Points are always 0 in the punitive model (no positive scoring).
    */
-  const addOneOff = useCallback(async (assignedTo: Assignee, name: string, points: number) => {
+  const addOneOff = useCallback(async (assignedTo: Assignee, name: string) => {
     if (!board) return
     try {
       const task = await boardApi.createTask({
@@ -144,7 +114,7 @@ export function useBoard() {
         type: 'DAILY',
         frequency: 'DAILY',
         defaultAssignee: assignedTo,
-        points,
+        points: 0,
         oneOff: true,   // ← prevents recreation on subsequent days
       })
       const assignment = await boardApi.assign(task.id, assignedTo, date)

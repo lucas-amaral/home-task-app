@@ -1,5 +1,5 @@
 export type TaskType = 'DAILY' | 'WEEKLY' | 'JOINT' | 'RULE'
-export type TaskFrequency = 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY'
+export type TaskFrequency = 'DAILY' | 'EVERY_2_DAYS' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY'
 export type Assignee = 'CHILD1' | 'CHILD2' | 'BOTH' | 'UNASSIGNED'
 
 export interface Task {
@@ -33,6 +33,20 @@ export interface Assignment {
   points: number
 }
 
+export interface ConsequenceDto {
+  level: number
+  description: string
+  active: boolean
+}
+
+export interface WeeklyStatusDto {
+  assignee: Assignee
+  name: string
+  weekStart: string
+  occurrenceCount: number
+  consequences: ConsequenceDto[]
+}
+
 export interface BoardDto {
   date: string
   weekStart: string
@@ -40,6 +54,7 @@ export interface BoardDto {
   child2Name: string
   assignments: Assignment[]
   weekPoints: Record<string, number>
+  weeklyStatus: WeeklyStatusDto[]
 }
 
 export interface WeekSummaryDto {
@@ -48,6 +63,7 @@ export interface WeekSummaryDto {
   child2Name: string
   assignments: Assignment[]
   points: Record<string, number>
+  weeklyStatus: WeeklyStatusDto[]
 }
 
 export interface FamilyConfig {

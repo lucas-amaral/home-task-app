@@ -1,9 +1,7 @@
-import { useEffect, useState } from 'react'
 import { useBoard } from '../hooks/useBoard'
-import { Header, PersonScoreCards, RewardsPanel, Legend } from '../components/Layout'
+import { Header, Legend } from '../components/Layout'
+import { ConsequencePanel } from '../components/ConsequencePanel'
 import { BoardColumns } from '../components/BoardColumns'
-import { boardApi } from '../api/client'
-import type { Reward } from '../types'
 
 export function BoardPage() {
   const {
@@ -11,9 +9,6 @@ export function BoardPage() {
     assign, toggleComplete, applyPenalty, deleteAssignment, addOneOff,
     weekLabel, todayLabel, refetch,
   } = useBoard()
-  const [rewards, setRewards] = useState<Reward[]>([])
-
-  useEffect(() => { boardApi.listRewards().then(setRewards).catch(() => {}) }, [])
 
   if (error) {
     return (
@@ -42,18 +37,17 @@ export function BoardPage() {
 
        {loading && !board ? (
          <p style={{ textAlign:'center', padding:'60px 0', color:'var(--text-hint)', fontSize:14 }}>
-           Loading board…
+           Carregando o quadro…
          </p>
        ) : board ? (
          <>
-           <PersonScoreCards
+           <ConsequencePanel
+             status={board.weeklyStatus}
              child1Name={board.child1Name}
              child2Name={board.child2Name}
-             child1Points={board.weekPoints['CHILD1'] ?? 0}
-             child2Points={board.weekPoints['CHILD2'] ?? 0}
            />
            <p style={{ fontSize:11, color:'var(--text-hint)', marginBottom:11 }}>
-             Arraste os cards entre as colunas · Clique no avatar para atribuir · Círculo = marcar como concluído
+             Arraste os cards entre as colunas (ou toque no avatar) para atribuir · Círculo = marcar como concluído
            </p>
            <div style={{ marginBottom:20 }}>
              <BoardColumns
@@ -65,11 +59,6 @@ export function BoardPage() {
                onAddOneOff={addOneOff}
              />
            </div>
-           <RewardsPanel
-             child1Points={board.weekPoints['CHILD1'] ?? 0}
-             child2Points={board.weekPoints['CHILD2'] ?? 0}
-             rewards={rewards}
-           />
            <Legend />
          </>
        ) : null}
