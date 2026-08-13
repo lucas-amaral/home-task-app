@@ -1,7 +1,7 @@
 import type { WeeklyStatusDto } from '../types'
 
 interface Props {
-  status: WeeklyStatusDto[]
+  status?: WeeklyStatusDto[]
   child1Name: string
   child2Name: string
 }
@@ -16,7 +16,7 @@ const COLOR: Record<string, 'child1' | 'child2'> = { CHILD1: 'child1', CHILD2: '
  * call for.
  */
 export function ConsequencePanel({ status, child1Name, child2Name }: Props) {
-  if (status.length === 0) return null
+  if (!status || status.length === 0) return null
 
   return (
     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:20 }}>
