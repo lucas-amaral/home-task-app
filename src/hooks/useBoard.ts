@@ -27,8 +27,14 @@ export function useBoard() {
       setLoading(true)
       setError(null)
       const data = await boardApi.getBoard(date)
+      console.log('✓ Board data fetched:', data)
+      console.log('  - Assignments count:', data?.assignments?.length ?? 0)
+      console.log('  - Date:', data?.date)
+      console.log('  - WeekStart:', data?.weekStart)
       setBoard(data)
-    } catch {
+      console.log('✓ Board state updated via setBoard()')
+    } catch (err) {
+      console.error('✗ Error fetching board:', err)
       setError('Não foi possível carregar o quadro. Verifique a conexão com o servidor.')
     } finally {
       setLoading(false)

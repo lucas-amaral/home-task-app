@@ -30,6 +30,12 @@ export function BoardColumns({ board, onAssign, onToggleComplete, onPenalty, onD
   const [activeId, setActiveId] = useState<number | null>(null)
   const [addingTo, setAddingTo] = useState<ColId | null>(null)
 
+  console.log('📋 BoardColumns rendered with board:', {
+    date: board.date,
+    assignmentsCount: board.assignments?.length ?? 0,
+    assignments: board.assignments?.map(a => ({ id: a.id, name: a.taskName, assigned: a.assignedTo }))
+  })
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   )

@@ -2,6 +2,7 @@ import { useBoard } from '../hooks/useBoard'
 import { Header, Legend } from '../components/Layout'
 import { ConsequencePanel } from '../components/ConsequencePanel'
 import { BoardColumns } from '../components/BoardColumns'
+import { useEffect } from 'react'
 
 export function BoardPage() {
   const {
@@ -9,6 +10,17 @@ export function BoardPage() {
     assign, toggleComplete, applyPenalty, deleteAssignment, addOneOff,
     weekLabel, todayLabel, refetch,
   } = useBoard()
+
+  useEffect(() => {
+    console.log('🏠 BoardPage updated:', { 
+      loading, 
+      error, 
+      boardExists: !!board, 
+      assignmentsCount: board?.assignments?.length ?? 0,
+      weekLabel,
+      todayLabel
+    })
+  }, [board, loading, error, weekLabel, todayLabel])
 
   if (error) {
     return (

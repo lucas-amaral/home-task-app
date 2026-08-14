@@ -9,7 +9,25 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+// Add request/response logging for debugging
+api.interceptors.request.use((config) => {
+  console.log(`📤 Request: ${config.method?.toUpperCase()} ${config.url}`)
+  return config
+})
+
+api.interceptors.response.use(
+  (response) => {
+    console.log(`📥 Response from ${response.config.url}:`, response.status, response.data)
+    return response
+  },
+  (error) => {
+    console.error(`❌ API Error on ${error.config?.url}:`, error.message, error.response?.data)
+    return Promise.reject(error)
+  }
+)
+
 export const boardApi = {
+  // ...existing code...
   // Board
   getBoard: (date?: string): Promise<BoardDto> =>
     api.get('/board', { params: date ? { date } : {} }).then(r => r.data),
