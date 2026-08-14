@@ -40,7 +40,8 @@ export function useBoard() {
   const patchAssignment = useCallback((updated: any) => {
     setBoard(prev => prev ? {
       ...prev,
-      assignments: prev.assignments.map(a => a.id === updated.id ? updated : a),
+      // defensive: guard against prev.assignments being undefined
+      assignments: (prev.assignments ?? []).map(a => a.id === updated.id ? updated : a),
     } : prev)
   }, [])
 
@@ -95,7 +96,8 @@ export function useBoard() {
       await boardApi.deleteAssignment(id)
       setBoard(prev => prev ? {
         ...prev,
-        assignments: prev.assignments.filter(a => a.id !== id),
+        // defensive: guard against prev.assignments being undefined
+        assignments: (prev.assignments ?? []).filter(a => a.id !== id),
       } : prev)
       fetchBoard()
     } catch (e) { console.error('deleteAssignment error', e) }
@@ -120,7 +122,8 @@ export function useBoard() {
       const assignment = await boardApi.assign(task.id, assignedTo, date)
       setBoard(prev => prev ? {
         ...prev,
-        assignments: [...prev.assignments, assignment],
+        // defensive: guard against prev.assignments being undefined
+        assignments: [...(prev.assignments ?? []), assignment],
       } : prev)
     } catch (e) { console.error('addOneOff error', e) }
   }, [board, date])

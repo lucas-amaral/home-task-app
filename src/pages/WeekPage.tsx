@@ -41,7 +41,8 @@ export function WeekPage() {
         : await boardApi.complete(a.id)
       setSummary(prev => prev ? {
         ...prev,
-        assignments: prev.assignments.map(x => x.id === a.id ? updated : x),
+        // defensive: guard against prev.assignments being undefined
+        assignments: (prev.assignments ?? []).map(x => x.id === a.id ? updated : x),
       } : prev)
       loadSummary(weekDate)
     } catch (e) { console.error('toggleComplete', e) }
@@ -59,7 +60,8 @@ export function WeekPage() {
       )
       setSummary(prev => prev ? {
         ...prev,
-        assignments: prev.assignments.map(x => x.id === a.id ? updated : x)
+        // defensive: guard against prev.assignments being undefined
+        assignments: (prev.assignments ?? []).map(x => x.id === a.id ? updated : x)
       } : prev)
     } catch (e) { console.error('reassign', e) }
   }, [])
@@ -72,7 +74,8 @@ export function WeekPage() {
         : await boardApi.penalty(a.id)
       setSummary(prev => prev ? {
         ...prev,
-        assignments: prev.assignments.map(x => x.id === a.id ? updated : x),
+        // defensive: guard against prev.assignments being undefined
+        assignments: (prev.assignments ?? []).map(x => x.id === a.id ? updated : x),
       } : prev)
       loadSummary(weekDate)
     } catch (e) { console.error('togglePenalty', e) }
@@ -84,7 +87,8 @@ export function WeekPage() {
       await boardApi.deleteAssignment(a.id)
       setSummary(prev => prev ? {
         ...prev,
-        assignments: prev.assignments.filter(x => x.id !== a.id)
+        // defensive: guard against prev.assignments being undefined
+        assignments: (prev.assignments ?? []).filter(x => x.id !== a.id)
       } : prev)
       loadSummary(weekDate)
     } catch (e) { console.error('deleteAssignment', e) }
@@ -183,9 +187,10 @@ function WeekGrid({ summary, weekStart, onToggleComplete, onReassign, onTogglePe
 
   const isDailyLike = (f: string) => f === 'DAILY' || f === 'EVERY_2_DAYS'
 
-  const weeklyTasks = summary.assignments.filter(a => !isDailyLike(a.taskFrequency))
+  // defensive: guard against summary.assignments being undefined
+  const weeklyTasks = (summary.assignments ?? []).filter(a => !isDailyLike(a.taskFrequency))
   const dailyByDay  = (dateStr: string) =>
-    summary.assignments.filter(a => isDailyLike(a.taskFrequency) && a.periodDate === dateStr)
+    (summary.assignments ?? []).filter(a => isDailyLike(a.taskFrequency) && a.periodDate === dateStr)
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
