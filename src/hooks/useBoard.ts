@@ -128,11 +128,25 @@ export function useBoard() {
     } catch (e) { console.error('addOneOff error', e) }
   }, [board, date])
 
-  const weekLabel = board
-    ? format(new Date(board.weekStart + 'T12:00:00'), "dd 'de' MMMM", { locale: ptBR })
+  const weekLabel = board && board.weekStart
+    ? (() => {
+        try {
+          return format(new Date(board.weekStart + 'T12:00:00'), "dd 'de' MMMM", { locale: ptBR })
+        } catch (e) {
+          console.error('Invalid weekStart date:', board.weekStart, e)
+          return ''
+        }
+      })()
     : ''
-  const todayLabel = board
-    ? format(new Date(board.date + 'T12:00:00'), "EEEE, dd 'de' MMMM", { locale: ptBR })
+  const todayLabel = board && board.date
+    ? (() => {
+        try {
+          return format(new Date(board.date + 'T12:00:00'), "EEEE, dd 'de' MMMM", { locale: ptBR })
+        } catch (e) {
+          console.error('Invalid board.date:', board.date, e)
+          return ''
+        }
+      })()
     : ''
 
   return {

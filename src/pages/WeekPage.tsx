@@ -182,15 +182,25 @@ function WeekGrid({ summary, weekStart, onToggleComplete, onReassign, onTogglePe
     return format(d, 'yyyy-MM-dd')
   })
 
-  const dayLabel = (dateStr: string) =>
-    format(new Date(dateStr + 'T12:00:00'), "EEEE, dd/MM", { locale: ptBR })
+  const dayLabel = (dateStr: string) => {
+    // defensive: guard against invalid dateStr
+    if (!dateStr) return '—'
+    try {
+      return format(new Date(dateStr + 'T12:00:00'), "EEEE, dd/MM", { locale: ptBR })
+    } catch (e) {
+      console.error('Invalid date string for dayLabel:', dateStr, e)
+      return '—'
+    }
+  }
 
   const isDailyLike = (f: string) => f === 'DAILY' || f === 'EVERY_2_DAYS'
 
   // defensive: guard against summary.assignments being undefined
   const weeklyTasks = (summary.assignments ?? []).filter(a => !isDailyLike(a.taskFrequency))
   const dailyByDay  = (dateStr: string) =>
-    (summary.assignments ?? []).filter(a => isDailyLike(a.taskFrequency) && a.periodDate === dateStr)
+    (summary.assignments ?? []).filter(a =>
+      isDailyLike(a.taskFrequency) && a.periodDate && a.periodDate === dateStr
+    )
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
@@ -259,7 +269,14 @@ function TaskRow({ a, summary, onToggleComplete, onReassign, onTogglePenalty, on
     : 'Não atribuída'
 
   const completedTime = a.completedAt
-    ? format(new Date(a.completedAt), "dd/MM HH:mm")
+    ? (() => {
+        try {
+          return format(new Date(a.completedAt), "dd/MM HH:mm")
+        } catch (e) {
+          console.error('Invalid completedAt date:', a.completedAt, e)
+          return null
+        }
+      })()
     : null
 
   async function run(fn: () => Promise<void>) {

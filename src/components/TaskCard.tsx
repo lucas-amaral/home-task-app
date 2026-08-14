@@ -48,13 +48,31 @@ export function TaskCard({
   const allChecked = !hasSteps || steps.every((_, i) => checked[i])
 
   const completedDateLabel = isCompleted && assignment.completedAt
-    ? format(new Date(assignment.completedAt), "dd/MM HH:mm", { locale: ptBR })
+    ? (() => {
+        try {
+          return format(new Date(assignment.completedAt), "dd/MM HH:mm", { locale: ptBR })
+        } catch (e) {
+          console.error('Invalid completedAt date:', assignment.completedAt, e)
+          return null
+        }
+      })()
     : null
 
-  const periodDate = new Date(assignment.periodDate + 'T12:00:00')
-  const periodLabel = assignment.taskType === 'WEEKLY'
-    ? `${format(periodDate, 'dd')}–${format(addDays(periodDate, 6), 'dd MMM', { locale: ptBR })}`
-    : format(periodDate, 'dd/MM', { locale: ptBR })
+  // defensive: guard against invalid periodDate
+  let periodDate: Date = new Date()
+  let periodLabel: string = '—'
+
+  if (assignment.periodDate) {
+    try {
+      periodDate = new Date(assignment.periodDate + 'T12:00:00')
+      periodLabel = assignment.taskType === 'WEEKLY'
+        ? `${format(periodDate, 'dd')}–${format(addDays(periodDate, 6), 'dd MMM', { locale: ptBR })}`
+        : format(periodDate, 'dd/MM', { locale: ptBR })
+    } catch (e) {
+      console.error('Invalid periodDate:', assignment.periodDate, e)
+      periodLabel = '—'
+    }
+  }
 
   function handleDoneClick() {
     if (isCompleted) { onToggleComplete(); return }
