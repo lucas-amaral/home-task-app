@@ -36,6 +36,19 @@ The app is now a installable Progressive Web App — no app store needed.
 
 Either way it opens full-screen like a native app, with its own icon.
 
+## 3. Turn on the reminders (push notifications)
+
+On each kid's phone, open the board and, in **🔔 Lembretes neste celular**, tap
+the kid's name and allow notifications. They get a notification at 12:00 and at
+19:00 listing the tasks still open that day ("Enviar teste" checks it right away).
+
+- **iPhone:** only works in the app installed on the home screen (Safari →
+  Compartilhar → Adicionar à Tela de Início), iOS 16.4 or later. In Safari itself
+  the card just shows that tip.
+- The backend must have the VAPID keys and `CRON_TOKEN` set (see the backend's DEPLOY.md).
+- The handlers live in `public/push-sw.js`, imported into the generated service
+  worker through `workbox.importScripts` in `vite.config.ts`.
+
 ## Local Development
 
 ```bash

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { installWakingRetry } from './waking'
 import type {
   BoardDto, Task, Assignment, Reward, PointLedgerDto,
   FamilyConfig, CreateTaskRequest, UpdateTaskRequest, Assignee, WeekSummaryDto
@@ -25,6 +26,9 @@ api.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+// Waits for the backend while Render wakes it up, instead of failing the first call of the day.
+installWakingRetry(api)
 
 export const boardApi = {
   // ...existing code...
@@ -85,3 +89,22 @@ export const boardApi = {
   listRewards: (): Promise<Reward[]> =>
     api.get('/rewards').then(r => r.data),
 }
+
+export type ReminderChild = 'CHILD1' | 'CHILD2'
+
+/** Reminders on the children's phones (Web Push). */
+export const pushApi = {
+  /** The VAPID public key, and whether the backend is set up to send pushes at all. */
+  publicKey: (): Promise<{ publicKey: string; enabled: boolean }> =>
+    api.get('/push/public-key').then(r => r.data),
+
+  subscribe: (subscription: { endpoint: string; p256dh: string; auth: string }, assignee: ReminderChild): Promise<void> =>
+    api.post('/push/subscriptions', { ...subscription, assignee }).then(() => undefined),
+
+  unsubscribe: (endpoint: string): Promise<void> =>
+    api.delete('/push/subscriptions', { data: { endpoint } }).then(() => undefined),
+
+  test: (endpoint: string): Promise<{ result: 'SENT' | 'GONE' | 'FAILED' }> =>
+    api.post('/push/test', { endpoint }).then(r => r.data),
+}
+

@@ -4,10 +4,12 @@ import { BoardPage }   from './pages/BoardPage'
 import { WeekPage }    from './pages/WeekPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { AdminPage }   from './pages/AdminPage'
+import { WakingNotice } from './components/WakingNotice'
 
 export default function App() {
   return (
     <BrowserRouter>
+      <WakingNotice />
       <Nav />
       <Routes>
         <Route path="/"        element={<BoardPage />} />

@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'push-sw.js'],
       manifest: {
         name: 'Tarefas da Casa',
         short_name: 'Tarefas',
@@ -25,6 +25,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // The push and notification-click handlers live in public/push-sw.js.
+        importScripts: ['push-sw.js'],
         // Never cache API calls — the board must always show live data.
         // Only the app shell (JS/CSS/HTML/icons) is cached for offline/instant loads.
         navigateFallbackDenylist: [/^\/api\//],

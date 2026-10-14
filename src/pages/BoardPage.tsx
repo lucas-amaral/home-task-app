@@ -2,6 +2,7 @@ import { useBoard } from '../hooks/useBoard'
 import { Header, Legend } from '../components/Layout'
 import { ConsequencePanel } from '../components/ConsequencePanel'
 import { BoardColumns } from '../components/BoardColumns'
+import { PushSettings } from '../components/PushSettings'
 import { useEffect } from 'react'
 
 export function BoardPage() {
@@ -72,6 +73,7 @@ export function BoardPage() {
              />
            </div>
            <Legend />
+           <PushSettings child1Name={board.child1Name} child2Name={board.child2Name} />
          </>
        ) : null}
     </div>

@@ -72,3 +72,44 @@ button { font-family: var(--font-body); cursor: pointer; border: none; backgroun
 @media (max-width: 520px) {
   input, select, textarea { font-size: 16px !important; }
 }
+
+/* ── Backend waking up (WakingNotice) ─────────────────────────────────────── */
+
+.waking-notice {
+  position: fixed;
+  z-index: 200;
+  top: calc(12px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  box-shadow: var(--shadow-md);
+}
+
+.waking-spinner {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--rule-border);
+  border-radius: 50%;
+  animation: waking-spin 0.9s linear infinite;
+}
+
+@keyframes waking-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waking-spinner { animation-duration: 3s; }
+}
